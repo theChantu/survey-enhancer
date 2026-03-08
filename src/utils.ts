@@ -25,18 +25,52 @@ store.subscribe((changed) => {
     }
 });
 
+function capitalize(text: string) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function extractSymbol(text: string) {
     const m = text.match(/[£$€]/);
     return m ? m[0] : null;
 }
 
-function getRandomTimeout() {
-    // 5 - 7 minutes
-    const MAX_TIMEOUT = 7;
-    const MIN_TIMEOUT = 5;
+function getRandomTimeoutMs() {
+    // 3 - 5 minutes
+    const MAX_TIMEOUT = 5;
+    const MIN_TIMEOUT = 3;
     return (
-        Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) + MIN_TIMEOUT
+        (Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) +
+            MIN_TIMEOUT) *
+        60 *
+        1000
     );
+}
+
+function scheduleTimeout(fn: () => void, delay = 300) {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    const run = () => {
+        timeout = setTimeout(() => {
+            timeout = null;
+            fn();
+        }, delay);
+    };
+
+    return {
+        start() {
+            if (!timeout) run();
+        },
+        reset() {
+            if (timeout) clearTimeout(timeout);
+            run();
+        },
+        clear() {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+            }
+        },
+    };
 }
 
 type GetResourceUrlParam = Parameters<typeof GM.getResourceUrl>[0];
@@ -117,7 +151,7 @@ async function runEnhancements() {
     ]);
 }
 
-const getSharedResources = fetchResources("prolific_logo");
+const getSharedResources = fetchResources("prolific", "cloudresearch");
 initDebug();
 export {
     log,
@@ -126,5 +160,7 @@ export {
     clamp,
     runEnhancements,
     extractSymbol,
-    getRandomTimeout,
+    getRandomTimeoutMs,
+    scheduleTimeout,
+    capitalize,
 };

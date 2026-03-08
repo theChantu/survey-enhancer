@@ -8,7 +8,7 @@ type CurrencyInfo = {
 };
 
 export abstract class BaseAdapter {
-    settings: Readonly<AdapterSettings>;
+    readonly settings: Readonly<AdapterSettings>;
 
     constructor(
         defaults: AdapterSettings,
@@ -20,9 +20,12 @@ export abstract class BaseAdapter {
     abstract getSurveyElements(): NodeListOf<HTMLElement>;
     abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyContainer(el: HTMLElement): HTMLElement | null;
+    abstract getStudyTitle(el: HTMLElement): HTMLElement | null;
 
     abstract getRewardElements(): HTMLElement[];
+    abstract getRewardElement(el: HTMLElement): HTMLElement | null;
     abstract getHourlyRateElements(): HTMLElement[];
+    // abstract getHourlyRateElement(el: HTMLElement): HTMLElement | null;
     abstract setHourlyRate(el: HTMLElement): void;
 
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;

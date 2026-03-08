@@ -1,6 +1,11 @@
 import store from "./store/store";
 import { uiEnhancement } from "./features";
-import { log, runEnhancements, getRandomTimeout } from "./utils";
+import {
+    log,
+    runEnhancements,
+    getRandomTimeoutMs,
+    scheduleTimeout,
+} from "./utils";
 import getSiteAdapter from "./config";
 
 (async function () {
@@ -109,14 +114,22 @@ import getSiteAdapter from "./config";
     const config = { childList: true, subtree: true };
     observer.observe(document.body, config);
 
+    const ms = getRandomTimeoutMs();
+    const pageReloadTimeout = scheduleTimeout(() => {
+        if (!document.hidden) {
+            pageReloadTimeout.reset();
+            return;
+        }
+
+        log("Refreshing page...");
+        location.reload();
+    }, ms);
+
     // Automatically refresh page after timeout if applicable
-    const siteAdapter = getSiteAdapter();
-    if (siteAdapter.settings.enableInterval) {
-        const ms = getRandomTimeout();
-        setTimeout(() => {
-            if (!document.hidden) return;
-            location.reload();
-        }, ms);
+    const { siteName, adapter } = getSiteAdapter();
+    if (adapter.settings.enableInterval) {
+        log("Page refresh scheduled.");
+        pageReloadTimeout.start();
     }
 
     function createMenuCommandRefresher() {

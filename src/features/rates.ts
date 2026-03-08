@@ -151,9 +151,12 @@ class ConvertCurrencyEnhancement extends Enhancement {
             element.classList.add(`current-${selectedSymbol}`);
 
             const elementRate = extractHourlyRate(sourceText);
-            let modified = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
-            if (sourceText.includes("/hr")) modified += "/hr";
-            element.textContent = modified;
+            const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
+
+            element.textContent = sourceText.replace(
+                /[$£€]?\s*\d+(?:\.\d+)?/,
+                converted,
+            );
         }
     }
     revert() {

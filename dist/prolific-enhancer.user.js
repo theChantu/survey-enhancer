@@ -17,7 +17,8 @@
 // @grant        GM.getResourceUrl
 // @grant        GM.registerMenuCommand
 // @grant        GM.unregisterMenuCommand
-// @resource     prolific_logo https://app.prolific.com/apple-touch-icon.png
+// @resource     prolific https://app.prolific.com/apple-touch-icon.png
+// @resource     cloudresearch https://connect.cloudresearch.com/participant/favicon.ico
 // @downloadURL  https://github.com/theChantu/prolific-enhancer/raw/main/dist/prolific-enhancer.user.js
 // ==/UserScript==
 
@@ -125,14 +126,41 @@
       debugEnabled = changed.enableDebug;
     }
   });
+  function capitalize(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
   function extractSymbol(text) {
     const m = text.match(/[£$€]/);
     return m ? m[0] : null;
   }
-  function getRandomTimeout() {
-    const MAX_TIMEOUT = 7;
-    const MIN_TIMEOUT = 5;
-    return Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) + MIN_TIMEOUT;
+  function getRandomTimeoutMs() {
+    const MAX_TIMEOUT = 5;
+    const MIN_TIMEOUT = 3;
+    return (Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) + MIN_TIMEOUT) * 60 * 1e3;
+  }
+  function scheduleTimeout(fn, delay = 300) {
+    let timeout = null;
+    const run = () => {
+      timeout = setTimeout(() => {
+        timeout = null;
+        fn();
+      }, delay);
+    };
+    return {
+      start() {
+        if (!timeout) run();
+      },
+      reset() {
+        if (timeout) clearTimeout(timeout);
+        run();
+      },
+      clear() {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+      }
+    };
   }
   var fetchResources = (...args) => {
     let promise = null;
@@ -191,7 +219,7 @@
       !hidden && uiEnhancement.apply()
     ]);
   }
-  var getSharedResources = fetchResources("prolific_logo");
+  var getSharedResources = fetchResources("prolific", "cloudresearch");
   initDebug();
 
   // src/adapters/ProlificAdapter.ts
@@ -208,13 +236,16 @@
       );
     }
     getSurveyId(el) {
-      return el.getAttribute("data-testid")?.replace("study-", "") || null;
+      return el.getAttribute("data-testid")?.replace("study-", "") ?? null;
     }
     getSurveyContainer(el) {
       return el.querySelector("div.study-content");
     }
+    getStudyTitle(el) {
+      return el.querySelector("h2") ?? null;
+    }
     getInitCurrencyInfo(el) {
-      return extractSymbol(el.textContent) || null;
+      return extractSymbol(el.textContent) ?? null;
     }
     getCurrencyInfo(el) {
       let displaySymbol = Array.from(el.classList).find(
@@ -227,8 +258,8 @@
       );
       if (sourceSymbol) sourceSymbol = sourceSymbol.replace("source-", "");
       return {
-        displaySymbol: displaySymbol || null,
-        sourceSymbol: sourceSymbol || null
+        displaySymbol: displaySymbol ?? null,
+        sourceSymbol: sourceSymbol ?? null
       };
     }
     getRewardElements() {
@@ -237,6 +268,9 @@
           "[data-testid='study-tag-reward-per-hour'], [data-testid='study-tag-reward']"
         )
       );
+    }
+    getRewardElement(el) {
+      return el.querySelector("span.reward") ?? null;
     }
     getHourlyRateElements() {
       return Array.from(
@@ -270,6 +304,9 @@
     getSurveyContainer(el) {
       return el.querySelector("div.project-card");
     }
+    getStudyTitle(el) {
+      return el.querySelector("p") ?? null;
+    }
     getInitCurrencyInfo(el) {
       return "$";
     }
@@ -280,7 +317,7 @@
       if (displaySymbol)
         displaySymbol = displaySymbol.replace("current-", "");
       return {
-        displaySymbol: displaySymbol || null,
+        displaySymbol: displaySymbol ?? null,
         // CloudResearch uses USD by default
         sourceSymbol: "$"
       };
@@ -288,9 +325,12 @@
     getRewardElements() {
       return Array.from(
         document.querySelectorAll(
-          '[class*="project-pay-per-hour-"]'
+          '[class*="project-pay-per-hour-"] > *'
         )
       );
+    }
+    getRewardElement(el) {
+      return el.querySelector('[class*="project-pay-per-hour-"]')?.firstElementChild ?? null;
     }
     getHourlyRateElements() {
       return Array.from(
@@ -311,7 +351,11 @@
   function getSiteAdapter() {
     const host = window.location.hostname;
     for (const key of Object.keys(siteAdapters)) {
-      if (host.includes(key)) return siteAdapters[key];
+      if (host.includes(key))
+        return {
+          siteName: key,
+          adapter: siteAdapters[key]
+        };
     }
     throw new Error(`Extension injected on unsupported host: ${host}`);
   }
@@ -319,9 +363,12 @@
 
   // src/features/enhancement.ts
   var Enhancement = class {
+    siteName;
     siteAdapter;
     constructor() {
-      this.siteAdapter = config_default();
+      const { siteName, adapter } = config_default();
+      this.siteName = siteName;
+      this.siteAdapter = adapter;
     }
   };
 
@@ -400,17 +447,21 @@
         if (!surveyId) continue;
         const isNewFingerprint = newSurveys.includes(surveyId);
         if (!isNewFingerprint || !document.hidden) continue;
-        const surveyTitle = survey.querySelector("h2.title")?.textContent || "New Survey";
-        const surveyReward = survey.querySelector("span.reward")?.textContent || "Unknown Reward";
+        const surveyTitle = this.siteAdapter.getStudyTitle(survey)?.textContent;
+        const rewardElement = this.siteAdapter.getRewardElement(survey);
+        const rewardText = rewardElement?.textContent.match(/\d+(\.\d+)?/)?.[0] || "Unknown reward";
         if (!surveyId) continue;
         const surveyLink = `https://app.prolific.com/studies/${surveyId}`;
+        const siteLabel = capitalize(this.siteName);
         GM.notification({
-          title: surveyTitle,
-          text: surveyReward,
-          image: assets["prolific_logo"],
-          onclick: () => GM.openInTab(surveyLink, {
-            active: true
-          })
+          title: surveyTitle || siteLabel,
+          text: `${siteLabel} \u2022 ${rewardText}`,
+          image: assets[this.siteName]
+          // TODO: Update survey links
+          // onclick: () =>
+          //     GM.openInTab(surveyLink, {
+          //         active: true,
+          //     }),
         });
       }
     }
@@ -526,9 +577,11 @@
         if (previousClassName) element.classList.remove(previousClassName);
         element.classList.add(`current-${selectedSymbol}`);
         const elementRate = extractHourlyRate(sourceText);
-        let modified = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
-        if (sourceText.includes("/hr")) modified += "/hr";
-        element.textContent = modified;
+        const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
+        element.textContent = sourceText.replace(
+          /[$£€]?\s*\d+(?:\.\d+)?/,
+          converted
+        );
       }
     }
     revert() {
@@ -824,13 +877,19 @@
     });
     const config = { childList: true, subtree: true };
     observer.observe(document.body, config);
-    const siteAdapter = config_default();
-    if (siteAdapter.settings.enableInterval) {
-      const ms = getRandomTimeout();
-      setTimeout(() => {
-        if (!document.hidden) return;
-        location.reload();
-      }, ms);
+    const ms = getRandomTimeoutMs();
+    const pageReloadTimeout = scheduleTimeout(() => {
+      if (!document.hidden) {
+        pageReloadTimeout.reset();
+        return;
+      }
+      log("Refreshing page...");
+      location.reload();
+    }, ms);
+    const { siteName, adapter } = config_default();
+    if (adapter.settings.enableInterval) {
+      log("Page refresh scheduled.");
+      pageReloadTimeout.start();
     }
     function createMenuCommandRefresher() {
       const commandIds = [];

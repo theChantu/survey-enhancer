@@ -28,6 +28,10 @@ export class CloudResearchAdapter extends BaseAdapter {
         return el.querySelector<HTMLElement>("div.project-card");
     }
 
+    getStudyTitle(el: HTMLElement) {
+        return el.querySelector<HTMLElement>("p") ?? null;
+    }
+
     getInitCurrencyInfo(el: HTMLElement) {
         return "$";
     }
@@ -40,7 +44,7 @@ export class CloudResearchAdapter extends BaseAdapter {
             displaySymbol = displaySymbol.replace("current-", "");
 
         return {
-            displaySymbol: displaySymbol || null,
+            displaySymbol: displaySymbol ?? null,
             // CloudResearch uses USD by default
             sourceSymbol: "$",
         };
@@ -49,8 +53,15 @@ export class CloudResearchAdapter extends BaseAdapter {
     getRewardElements() {
         return Array.from(
             document.querySelectorAll<HTMLElement>(
-                '[class*="project-pay-per-hour-"]',
+                '[class*="project-pay-per-hour-"] > *',
             ),
+        );
+    }
+
+    getRewardElement(el: HTMLElement) {
+        return (
+            (el.querySelector('[class*="project-pay-per-hour-"]')
+                ?.firstElementChild as HTMLElement) ?? null
         );
     }
 

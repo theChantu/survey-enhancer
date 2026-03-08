@@ -19,15 +19,19 @@ export class ProlificAdapter extends BaseAdapter {
     }
 
     getSurveyId(el: HTMLElement) {
-        return el.getAttribute("data-testid")?.replace("study-", "") || null;
+        return el.getAttribute("data-testid")?.replace("study-", "") ?? null;
     }
 
     getSurveyContainer(el: HTMLElement) {
         return el.querySelector<HTMLElement>("div.study-content");
     }
 
+    getStudyTitle(el: HTMLElement) {
+        return el.querySelector<HTMLElement>("h2") ?? null;
+    }
+
     getInitCurrencyInfo(el: HTMLElement) {
-        return extractSymbol(el.textContent) || null;
+        return extractSymbol(el.textContent) ?? null;
     }
 
     getCurrencyInfo(el: HTMLElement) {
@@ -42,8 +46,8 @@ export class ProlificAdapter extends BaseAdapter {
         if (sourceSymbol) sourceSymbol = sourceSymbol.replace("source-", "");
 
         return {
-            displaySymbol: displaySymbol || null,
-            sourceSymbol: sourceSymbol || null,
+            displaySymbol: displaySymbol ?? null,
+            sourceSymbol: sourceSymbol ?? null,
         };
     }
 
@@ -53,6 +57,10 @@ export class ProlificAdapter extends BaseAdapter {
                 "[data-testid='study-tag-reward-per-hour'], [data-testid='study-tag-reward']",
             ),
         );
+    }
+
+    getRewardElement(el: HTMLElement) {
+        return (el.querySelector("span.reward") as HTMLElement) ?? null;
     }
 
     getHourlyRateElements() {

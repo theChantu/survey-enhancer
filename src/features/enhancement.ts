@@ -1,10 +1,15 @@
 import getSiteAdapter from "../config";
 
+type CurrentSite = ReturnType<typeof getSiteAdapter>;
+
 export default abstract class Enhancement {
-    readonly siteAdapter: ReturnType<typeof getSiteAdapter>;
+    readonly siteName: CurrentSite["siteName"];
+    readonly siteAdapter: CurrentSite["adapter"];
 
     constructor() {
-        this.siteAdapter = getSiteAdapter();
+        const { siteName, adapter } = getSiteAdapter();
+        this.siteName = siteName;
+        this.siteAdapter = adapter;
     }
 
     abstract apply(): void;

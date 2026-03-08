@@ -17,6 +17,7 @@
 // @grant        GM.getResourceUrl
 // @grant        GM.registerMenuCommand
 // @grant        GM.unregisterMenuCommand
-// @resource     prolific_logo https://app.prolific.com/apple-touch-icon.png
+// @resource     prolific https://app.prolific.com/apple-touch-icon.png
+// @resource     cloudresearch https://connect.cloudresearch.com/participant/favicon.ico
 // @downloadURL  https://github.com/theChantu/prolific-enhancer/raw/main/dist/prolific-enhancer.user.js
 // ==/UserScript==

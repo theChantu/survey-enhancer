@@ -1,5 +1,5 @@
 import store from "../store/store";
-import { getSharedResources } from "../utils";
+import { getSharedResources, capitalize } from "../utils";
 import { NOTIFY_TTL_MS } from "../constants";
 import Enhancement from "./enhancement";
 
@@ -50,20 +50,25 @@ class NewSurveyNotificationsEnhancement extends Enhancement {
             if (!isNewFingerprint || !document.hidden) continue;
 
             const surveyTitle =
-                survey.querySelector("h2.title")?.textContent || "New Survey";
-            const surveyReward =
-                survey.querySelector("span.reward")?.textContent ||
-                "Unknown Reward";
+                this.siteAdapter.getStudyTitle(survey)?.textContent;
+            const rewardElement = this.siteAdapter.getRewardElement(survey);
+            const rewardText =
+                rewardElement?.textContent.match(/\d+(\.\d+)?/)?.[0] ||
+                "Unknown reward";
+
             if (!surveyId) continue;
             const surveyLink = `https://app.prolific.com/studies/${surveyId}`;
+            const siteLabel = capitalize(this.siteName);
+
             GM.notification({
-                title: surveyTitle,
-                text: surveyReward,
-                image: assets["prolific_logo"],
-                onclick: () =>
-                    GM.openInTab(surveyLink, {
-                        active: true,
-                    }),
+                title: surveyTitle || siteLabel,
+                text: `${siteLabel} • ${rewardText}`,
+                image: assets[this.siteName],
+                // TODO: Update survey links
+                // onclick: () =>
+                //     GM.openInTab(surveyLink, {
+                //         active: true,
+                //     }),
             });
         }
     }
