@@ -135,17 +135,16 @@ async function runEnhancements() {
         hidden && uiEnhancement.revert(),
     ]);
 
-    // Convert to selected currency before highlighting rates
+    // Fetch the latest currency rates before conversion
     if (enableCurrencyConversion) {
-        // Fetch the latest currency rates before conversion
         await updateRates();
     }
 
     // Currency conversion must happen first
     enableCurrencyConversion && (await convertCurrencyEnhancement.apply());
-    enableHighlightRates && (await highlightRatesEnhancement.apply());
 
     await Promise.all([
+        enableHighlightRates && highlightRatesEnhancement.apply(),
         enableSurveyLinks && surveyLinksEnhancement.apply(),
         enableNewSurveyNotifications &&
             newSurveyNotificationsEnhancement.apply(),

@@ -212,8 +212,8 @@
       await updateRates();
     }
     enableCurrencyConversion && await convertCurrencyEnhancement.apply();
-    enableHighlightRates && await highlightRatesEnhancement.apply();
     await Promise.all([
+      enableHighlightRates && highlightRatesEnhancement.apply(),
       enableSurveyLinks && surveyLinksEnhancement.apply(),
       enableNewSurveyNotifications && newSurveyNotificationsEnhancement.apply(),
       !hidden && uiEnhancement.apply()
