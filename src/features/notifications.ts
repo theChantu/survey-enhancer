@@ -57,6 +57,10 @@ class NewSurveyNotificationsEnhancement extends Enhancement {
             .filter((id): id is string => id !== undefined);
     }
 
+    private extractSurveyRate(survey: HTMLElement) {
+        return survey.textContent?.match(/\d+(\.\d+)?/)?.[0];
+    }
+
     private buildNotification(
         survey: HTMLElement,
         surveyId: string,
@@ -64,10 +68,16 @@ class NewSurveyNotificationsEnhancement extends Enhancement {
     ) {
         const surveyTitle = this.adapter.getStudyTitle(survey)?.textContent;
         const rewardElement = this.adapter.getRewardElement(survey);
-        const { displaySymbol } = this.adapter.getCurrencyInfo(rewardElement);
+        const hourlyRateElement = this.adapter.getHourlyRateElement(survey);
+        const displaySymbol = rewardElement
+            ? this.adapter.getCurrencyInfo(rewardElement).displaySymbol
+            : "";
         const rewardText =
-            rewardElement?.textContent?.match(/\d+(\.\d+)?/)?.[0] ??
+            (rewardElement && this.extractSurveyRate(rewardElement)) ||
             "Unknown reward";
+        const hourlyRateText =
+            (hourlyRateElement && this.extractSurveyRate(hourlyRateElement)) ||
+            "Unknown rate";
 
         const { path, suffix } = this.adapter.url;
         const surveyLink = this.adapter.buildUrl([
@@ -80,7 +90,7 @@ class NewSurveyNotificationsEnhancement extends Enhancement {
 
         return {
             title: surveyTitle || siteLabel,
-            text: `${siteLabel} • ${displaySymbol}${rewardText}`,
+            text: `${siteLabel} • ${displaySymbol}${rewardText} • ${displaySymbol}${hourlyRateText}/hr`,
             image: assets[this.adapter.siteName],
             onclick: () =>
                 GM.openInTab(surveyLink, {

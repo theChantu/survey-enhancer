@@ -749,7 +749,7 @@
       );
     }
     getRewardElement(el) {
-      return el.querySelector("span.reward")?.firstElementChild ?? null;
+      return el.querySelector("[data-testid='study-tag-reward']") ?? null;
     }
     getHourlyRateElements() {
       return Array.from(
@@ -757,6 +757,11 @@
           "[data-testid='study-tag-reward-per-hour']"
         )
       );
+    }
+    getHourlyRateElement(el) {
+      return el.querySelector(
+        "[data-testid='study-tag-reward-per-hour']"
+      ) ?? null;
     }
     setHourlyRate(el) {
     }
@@ -821,7 +826,9 @@
       );
     }
     getRewardElement(el) {
-      return el.querySelector('[class*="project-pay-per-hour-"]')?.firstElementChild ?? null;
+      return el.querySelector(
+        '[class*="project-pay-per-hour-"] > *'
+      ) ?? null;
     }
     getHourlyRateElements() {
       return Array.from(
@@ -829,6 +836,11 @@
           '[class*="project-pay-per-hour-"] > *:last-child'
         )
       );
+    }
+    getHourlyRateElement(el) {
+      return el.querySelector(
+        '[class*="project-pay-per-hour-"] > *:last-child'
+      ) ?? null;
     }
     setHourlyRate(element) {
     }
@@ -975,11 +987,16 @@
     extractSurveyFingerprints(surveys) {
       return Array.from(surveys).map((survey) => this.adapter.getSurveyId(survey)).filter((id) => id !== void 0);
     }
+    extractSurveyRate(survey) {
+      return survey.textContent?.match(/\d+(\.\d+)?/)?.[0];
+    }
     buildNotification(survey, surveyId, assets) {
       const surveyTitle = this.adapter.getStudyTitle(survey)?.textContent;
       const rewardElement = this.adapter.getRewardElement(survey);
-      const { displaySymbol } = this.adapter.getCurrencyInfo(rewardElement);
-      const rewardText = rewardElement?.textContent?.match(/\d+(\.\d+)?/)?.[0] ?? "Unknown reward";
+      const hourlyRateElement = this.adapter.getHourlyRateElement(survey);
+      const displaySymbol = rewardElement ? this.adapter.getCurrencyInfo(rewardElement).displaySymbol : "";
+      const rewardText = rewardElement && this.extractSurveyRate(rewardElement) || "Unknown reward";
+      const hourlyRateText = hourlyRateElement && this.extractSurveyRate(hourlyRateElement) || "Unknown rate";
       const { path, suffix } = this.adapter.url;
       const surveyLink = this.adapter.buildUrl([
         path,
@@ -989,7 +1006,7 @@
       const siteLabel = capitalize(this.adapter.siteName);
       return {
         title: surveyTitle || siteLabel,
-        text: `${siteLabel} \u2022 ${displaySymbol}${rewardText}`,
+        text: `${siteLabel} \u2022 ${displaySymbol}${rewardText} \u2022 ${displaySymbol}${hourlyRateText}/hr`,
         image: assets[this.adapter.siteName],
         onclick: () => GM.openInTab(surveyLink, {
           active: true

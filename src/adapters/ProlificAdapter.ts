@@ -68,8 +68,8 @@ export class ProlificAdapter extends BaseAdapter {
 
     getRewardElement(el: HTMLElement) {
         return (
-            (el.querySelector("span.reward")
-                ?.firstElementChild as HTMLElement) ?? null
+            el.querySelector<HTMLElement>("[data-testid='study-tag-reward']") ??
+            null
         );
     }
 
@@ -78,6 +78,14 @@ export class ProlificAdapter extends BaseAdapter {
             document.querySelectorAll<HTMLElement>(
                 "[data-testid='study-tag-reward-per-hour']",
             ),
+        );
+    }
+
+    getHourlyRateElement(el: HTMLElement) {
+        return (
+            el.querySelector<HTMLElement>(
+                "[data-testid='study-tag-reward-per-hour']",
+            ) ?? null
         );
     }
 

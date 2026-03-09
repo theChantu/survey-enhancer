@@ -48,6 +48,7 @@ export abstract class BaseAdapter {
     abstract getRewardElements(): HTMLElement[];
     abstract getRewardElement(el: HTMLElement): HTMLElement | null;
     abstract getHourlyRateElements(): HTMLElement[];
+    abstract getHourlyRateElement(el: HTMLElement): HTMLElement | null;
     abstract setHourlyRate(el: HTMLElement): void;
 
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;

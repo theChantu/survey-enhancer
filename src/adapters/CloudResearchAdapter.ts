@@ -71,8 +71,9 @@ export class CloudResearchAdapter extends BaseAdapter {
 
     getRewardElement(el: HTMLElement) {
         return (
-            (el.querySelector('[class*="project-pay-per-hour-"]')
-                ?.firstElementChild as HTMLElement) ?? null
+            el.querySelector<HTMLElement>(
+                '[class*="project-pay-per-hour-"] > *',
+            ) ?? null
         );
     }
 
@@ -81,6 +82,14 @@ export class CloudResearchAdapter extends BaseAdapter {
             document.querySelectorAll<HTMLElement>(
                 '[class*="project-pay-per-hour-"] > *:last-child',
             ),
+        );
+    }
+
+    getHourlyRateElement(el: HTMLElement) {
+        return (
+            el.querySelector<HTMLElement>(
+                '[class*="project-pay-per-hour-"] > *:last-child',
+            ) ?? null
         );
     }
 
