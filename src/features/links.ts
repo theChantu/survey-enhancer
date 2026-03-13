@@ -1,11 +1,11 @@
-import Enhancement from "./enhancement";
+import BaseEnhancement from "./BaseEnhancement";
 
-class SurveyLinksEnhancement extends Enhancement {
+class SurveyLinksEnhancement extends BaseEnhancement {
     constructor() {
         super();
     }
 
-    apply() {
+    async apply() {
         const surveys = this.adapter.getSurveyElements();
         for (const survey of surveys) {
             const surveyId = this.adapter.getSurveyId(survey);
@@ -35,7 +35,7 @@ class SurveyLinksEnhancement extends Enhancement {
         }
     }
 
-    revert() {
+    async revert() {
         const elements = document.querySelectorAll(".pe-btn-container");
         for (const el of elements) {
             if (!el) continue;

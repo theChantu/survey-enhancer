@@ -1,7 +1,7 @@
 import store from "../store/store";
 import { capitalize } from "../lib/utils";
 import { NOTIFY_TTL_MS } from "../constants";
-import Enhancement from "./enhancement";
+import BaseEnhancement from "./BaseEnhancement";
 import getSiteResources from "../lib/getSiteResources";
 
 async function saveSurveyFingerprints(fingerprints: string[]) {
@@ -19,13 +19,13 @@ async function saveSurveyFingerprints(fingerprints: string[]) {
         }
     }
 
-    const newSurveys = [];
+    const newSurveys: string[] = [];
     for (const fingerprint of fingerprints) {
         if (!(fingerprint in prevSurveys)) {
             newSurveys.push(fingerprint);
+            prevSurveys[fingerprint] = now;
+            changed = true;
         }
-        prevSurveys[fingerprint] = now;
-        changed = true;
     }
 
     if (changed) await store.set({ surveys: prevSurveys });
@@ -33,7 +33,7 @@ async function saveSurveyFingerprints(fingerprints: string[]) {
     return newSurveys;
 }
 
-class NewSurveyNotificationsEnhancement extends Enhancement {
+class NewSurveyNotificationsEnhancement extends BaseEnhancement {
     async apply() {
         const surveys = this.adapter.getSurveyElements();
         if (surveys.length === 0) return;
@@ -66,7 +66,7 @@ class NewSurveyNotificationsEnhancement extends Enhancement {
         surveyId: string,
         assets: Awaited<ReturnType<typeof getSiteResources>>,
     ) {
-        const surveyTitle = this.adapter.getStudyTitle(survey)?.textContent;
+        const surveyTitle = this.adapter.getSurveyTitle(survey)?.textContent;
         const rewardElement = this.adapter.getRewardElement(survey);
         const hourlyRateElement = this.adapter.getHourlyRateElement(survey);
         const displaySymbol = rewardElement
@@ -99,7 +99,7 @@ class NewSurveyNotificationsEnhancement extends Enhancement {
         };
     }
 
-    revert() {
+    async revert() {
         // No cleanup necessary for notifications
     }
 }

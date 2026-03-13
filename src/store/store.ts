@@ -1,7 +1,7 @@
-import type { VMSettings } from "../lib/types";
-import { defaultVMSettings } from "./defaults";
+import type { SiteSettings } from "../lib/types";
+import { defaultSiteSettings } from "./defaults";
 
-type StoreSchema = VMSettings & {};
+type StoreSchema = SiteSettings & {};
 
 export type StoreListener = (changed: Partial<StoreSchema>) => void;
 
@@ -40,7 +40,7 @@ function createStore() {
         const values = await GM.getValues([...keys]);
         return Object.fromEntries(
             keys.map((k) => {
-                return [k, deepMerge(defaultVMSettings[k], values[k])];
+                return [k, deepMerge(defaultSiteSettings[k], values[k])];
             }),
         ) as Pick<
             { [P in keyof StoreSchema]: DeepNonNullable<StoreSchema[P]> },

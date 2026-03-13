@@ -1,11 +1,7 @@
 import store from "./store/store";
 import { uiEnhancement } from "./features";
-import {
-    log,
-    runEnhancements,
-    getRandomTimeoutMs,
-    scheduleTimeout,
-} from "./lib/utils";
+import { log, getRandomTimeoutMs, scheduleTimeout } from "./lib/utils";
+import runEnhancements from "./lib/runEnhancements";
 import getSiteAdapter from "./lib/getSiteAdapter";
 
 (async function () {
@@ -81,28 +77,38 @@ import getSiteAdapter from "./lib/getSiteAdapter";
         delay = 300,
     ): (...args: Parameters<F>) => void {
         let timeoutId: ReturnType<typeof setTimeout>;
-        let runId = 0;
 
         return (...args) => {
-            runId++;
-            const currentRun = runId;
-
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
-                if (currentRun !== runId) return;
                 Promise.resolve(fn(...args)).catch(console.error);
             }, delay);
         };
     }
 
-    // Apply the enhancements initially
-    await runEnhancements();
+    let observer: MutationObserver;
+    const observerConfig = { childList: true, subtree: true };
+
+    async function safelyRunEnhancements() {
+        observer.disconnect();
+        try {
+            await runEnhancements();
+        } finally {
+            observer.observe(document.body, observerConfig);
+        }
+    }
+
     const debounced = debounce(async () => {
-        await runEnhancements();
+        observer.disconnect();
+        try {
+            await runEnhancements();
+        } finally {
+            observer.observe(document.body, observerConfig);
+        }
     }, 300);
 
     // Observe the DOM for changes and re-run the enhancements if necessary
-    const observer = new MutationObserver((mutations) => {
+    observer = new MutationObserver((mutations) => {
         const hasChanges = mutations.some(
             (m) => m.addedNodes.length > 0 || m.removedNodes.length > 0,
         );
@@ -111,8 +117,8 @@ import getSiteAdapter from "./lib/getSiteAdapter";
         debounced();
     });
 
-    const config = { childList: true, subtree: true };
-    observer.observe(document.body, config);
+    // Apply the enhancements initially
+    await safelyRunEnhancements();
 
     const ms = getRandomTimeoutMs();
     const pageReloadTimeout = scheduleTimeout(() => {
@@ -142,13 +148,13 @@ import getSiteAdapter from "./lib/getSiteAdapter";
             commandIds.length = 0;
 
             const {
-                ui: { hidden },
+                ui: { visible },
             } = await store.get(["ui"]);
 
             const id = GM.registerMenuCommand(
-                `${hidden ? "Show" : "Hide"} Settings UI`,
+                `${visible ? "Hide" : "Show"} Settings UI`,
                 async () => {
-                    await store.update({ ui: { hidden: !hidden } });
+                    await store.update({ ui: { visible: !visible } });
                 },
             );
             commandIds.push(id);

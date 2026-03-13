@@ -4,17 +4,16 @@ import {
     MIN_AMOUNT_PER_HOUR,
     MAX_AMOUNT_PER_HOUR,
 } from "../constants.ts";
-import Enhancement from "./enhancement.ts";
-import { defaultVMSettings } from "../store/defaults.ts";
-import { log } from "../lib/utils.ts";
+import BaseEnhancement from "./BaseEnhancement.ts";
+import { defaultSiteSettings } from "../store/defaults.ts";
 
-import type { VMSettings } from "../lib/types.ts";
+import type { SiteSettings } from "../lib/types.ts";
 
-type ConversionRates = VMSettings["conversionRates"];
+type ConversionRates = SiteSettings["conversionRates"];
 
 async function fetchRates() {
     const { timestamp, ...conversionRates } = structuredClone(
-        defaultVMSettings.conversionRates,
+        defaultSiteSettings.conversionRates,
     );
     const currencies = Object.keys(
         conversionRates,
@@ -94,7 +93,7 @@ function getSymbol(currency: string) {
         .find((part) => part.type === "currency")?.value;
 }
 
-class ConvertCurrencyEnhancement extends Enhancement {
+class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
         const elements = this.adapter.getRewardElements();
         const { selectedCurrency, conversionRates } = await store.get([
@@ -120,6 +119,8 @@ class ConvertCurrencyEnhancement extends Enhancement {
                 const sourceSymbol = this.adapter.getInitCurrencyInfo(element);
 
                 element.classList.add(`source-${sourceSymbol}`);
+                // TODO: Replace classes with attributes for easier access
+                element.setAttribute("source", sourceSymbol ?? "");
             }
 
             const { sourceSymbol, displaySymbol } =
@@ -160,7 +161,7 @@ class ConvertCurrencyEnhancement extends Enhancement {
         element.classList.add(display);
     }
 
-    revert() {
+    async revert() {
         document.querySelectorAll("[data-original-text]").forEach((el) => {
             el.textContent = el.getAttribute("data-original-text") || "";
             el.removeAttribute("data-original-text");
@@ -178,7 +179,7 @@ class ConvertCurrencyEnhancement extends Enhancement {
     }
 }
 
-class HighlightRatesEnhancement extends Enhancement {
+class HighlightRatesEnhancement extends BaseEnhancement {
     async apply() {
         const elements = this.adapter.getHourlyRateElements();
         for (const element of elements) {
@@ -193,6 +194,10 @@ class HighlightRatesEnhancement extends Enhancement {
             if (isNaN(rate)) return;
 
             const { conversionRates } = await store.get(["conversionRates"]);
+
+            // TODO: Always convert to USD before highlighting to get proper color coding
+            // This will help when multiple currencies are supported
+            // Can fetch conversion rate if needed
 
             const min =
                 displaySymbol === "$"
@@ -209,7 +214,7 @@ class HighlightRatesEnhancement extends Enhancement {
                 element.classList.add("pe-rate-highlight");
         }
     }
-    revert() {
+    async revert() {
         const elements =
             document.querySelectorAll<HTMLElement>(".pe-rate-highlight");
         for (const el of elements) {

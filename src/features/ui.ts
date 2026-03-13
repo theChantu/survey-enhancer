@@ -1,8 +1,9 @@
 import store from "../store/store";
-import type { Enhancement } from "../lib/types";
-import type { StoreListener } from "../store/store";
+import BaseEnhancement from "./BaseEnhancement";
 import { clamp } from "../lib/utils";
-import { defaultVMSettings } from "../store/defaults";
+import { defaultSiteSettings } from "../store/defaults";
+
+import type { StoreListener } from "../store/store";
 
 function formatSettingString(setting: string) {
     return setting
@@ -11,10 +12,11 @@ function formatSettingString(setting: string) {
         .join(" ");
 }
 
-class UIEnhancement implements Enhancement {
+class UIEnhancement extends BaseEnhancement {
     controller: AbortController;
 
     constructor() {
+        super();
         this.controller = new AbortController();
     }
 
@@ -38,14 +40,14 @@ class UIEnhancement implements Enhancement {
 
         const settings = await store.get(
             Object.keys(
-                defaultVMSettings,
-            ) as (keyof typeof defaultVMSettings)[],
+                defaultSiteSettings,
+            ) as (keyof typeof defaultSiteSettings)[],
         );
 
         const createSettingElement = (
             labelText: string,
             buttonText: string,
-            setting: keyof typeof defaultVMSettings,
+            setting: keyof typeof defaultSiteSettings,
             onClick: () => Promise<void>,
         ) => {
             const toggleContainer = document.createElement("div");
@@ -81,7 +83,7 @@ class UIEnhancement implements Enhancement {
 
         const toggleSettings = Object.keys(settings).filter((key) =>
             key.startsWith("enable"),
-        ) as (keyof typeof defaultVMSettings)[];
+        ) as (keyof typeof defaultSiteSettings)[];
         for (const setting of toggleSettings) {
             const formattedSettingName = formatSettingString(setting);
 

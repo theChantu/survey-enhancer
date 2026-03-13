@@ -25,7 +25,7 @@
 "use strict";
 (() => {
   // src/store/defaults.ts
-  var defaultVMSettings = Object.freeze({
+  var defaultSiteSettings = Object.freeze({
     conversionRates: {
       timestamp: 0,
       USD: { rates: { GBP: 0.74, USD: 1 } },
@@ -38,7 +38,7 @@
     enableSurveyLinks: true,
     enableNewSurveyNotifications: true,
     surveys: {},
-    ui: { initialized: false, hidden: true, position: { left: 0, top: 0 } }
+    ui: { initialized: false, visible: true, position: { left: 0, top: 0 } }
   });
 
   // src/store/store.ts
@@ -59,7 +59,7 @@
       const values = await GM.getValues([...keys]);
       return Object.fromEntries(
         keys.map((k) => {
-          return [k, deepMerge(defaultVMSettings[k], values[k])];
+          return [k, deepMerge(defaultSiteSettings[k], values[k])];
         })
       );
     };
@@ -598,12 +598,18 @@
       this.siteName = getDomainWithoutSuffix2(url.host) ?? url.host;
       this.settings = { ...defaults, ...overrides };
     }
+    _moduleSet;
+    hasModule(module) {
+      this._moduleSet ??= new Set(this.modules);
+      return this._moduleSet.has(module);
+    }
     get origin() {
       return `https://${this.url.host}`;
     }
     buildUrl(segments) {
       return joinURL(this.origin, ...segments);
     }
+    // TODO: Each adapter will return custom CSS which will be injected within main.ts
   };
 
   // src/lib/utils.ts
@@ -659,39 +665,6 @@
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
-  async function runEnhancements() {
-    log("Running enhancements...");
-    const {
-      enableCurrencyConversion,
-      enableHighlightRates,
-      enableSurveyLinks,
-      enableNewSurveyNotifications,
-      ui: { hidden }
-    } = await store_default.get([
-      "enableCurrencyConversion",
-      "enableHighlightRates",
-      "enableSurveyLinks",
-      "enableNewSurveyNotifications",
-      "ui"
-    ]);
-    await Promise.all([
-      !enableCurrencyConversion && convertCurrencyEnhancement.revert(),
-      !enableHighlightRates && highlightRatesEnhancement.revert(),
-      !enableSurveyLinks && surveyLinksEnhancement.revert(),
-      !enableNewSurveyNotifications && newSurveyNotificationsEnhancement.revert(),
-      hidden && uiEnhancement.revert()
-    ]);
-    if (enableCurrencyConversion) {
-      await updateRates();
-    }
-    enableCurrencyConversion && await convertCurrencyEnhancement.apply();
-    await Promise.all([
-      enableHighlightRates && highlightRatesEnhancement.apply(),
-      enableSurveyLinks && surveyLinksEnhancement.apply(),
-      enableNewSurveyNotifications && newSurveyNotificationsEnhancement.apply(),
-      !hidden && uiEnhancement.apply()
-    ]);
-  }
   initDebug();
 
   // src/adapters/ProlificAdapter.ts
@@ -709,6 +682,13 @@
         overrides
       );
     }
+    modules = [
+      "CurrencyConversion",
+      "HighlightRates",
+      "NewSurveyNotifications",
+      "SurveyLinks",
+      "UI"
+    ];
     getSurveyElements() {
       return document.querySelectorAll(
         'li[data-testid^="study-"]'
@@ -720,7 +700,7 @@
     getSurveyContainer(el) {
       return el.querySelector("div.study-content");
     }
-    getStudyTitle(el) {
+    getSurveyTitle(el) {
       return el.querySelector("h2") ?? null;
     }
     getInitCurrencyInfo(el) {
@@ -787,6 +767,13 @@
         overrides
       );
     }
+    modules = [
+      "CurrencyConversion",
+      "HighlightRates",
+      "NewSurveyNotifications",
+      "SurveyLinks",
+      "UI"
+    ];
     getSurveyElements() {
       return document.querySelectorAll("div.project-card");
     }
@@ -800,7 +787,7 @@
     getSurveyContainer(el) {
       return el.querySelector("div.project-card");
     }
-    getStudyTitle(el) {
+    getSurveyTitle(el) {
       return el.querySelector("p") ?? null;
     }
     getInitCurrencyInfo(el) {
@@ -853,30 +840,33 @@
   }
   function getSiteAdapter() {
     const host = window.location.hostname;
-    for (const adapter2 of siteAdapters) {
-      if (matchesHost(host, adapter2.url.host)) {
-        return adapter2;
+    for (const adapter3 of siteAdapters) {
+      if (matchesHost(host, adapter3.url.host)) {
+        return adapter3;
       }
     }
     throw new Error(`Extension injected on unsupported host: ${host}`);
   }
   var getSiteAdapter_default = getSiteAdapter;
 
-  // src/features/enhancement.ts
-  var Enhancement = class {
+  // src/features/BaseEnhancement.ts
+  var BaseEnhancement = class {
     adapter;
     constructor() {
-      const adapter2 = getSiteAdapter_default();
-      this.adapter = adapter2;
+      this.adapter = getSiteAdapter_default();
+    }
+    async run() {
+      await this.revert();
+      await this.apply();
     }
   };
 
   // src/features/links.ts
-  var SurveyLinksEnhancement = class extends Enhancement {
+  var SurveyLinksEnhancement = class extends BaseEnhancement {
     constructor() {
       super();
     }
-    apply() {
+    async apply() {
       const surveys = this.adapter.getSurveyElements();
       for (const survey of surveys) {
         const surveyId = this.adapter.getSurveyId(survey);
@@ -902,7 +892,7 @@
         }
       }
     }
-    revert() {
+    async revert() {
       const elements = document.querySelectorAll(".pe-btn-container");
       for (const el of elements) {
         if (!el) continue;
@@ -963,14 +953,14 @@
     for (const fingerprint of fingerprints) {
       if (!(fingerprint in prevSurveys)) {
         newSurveys.push(fingerprint);
+        prevSurveys[fingerprint] = now;
+        changed = true;
       }
-      prevSurveys[fingerprint] = now;
-      changed = true;
     }
     if (changed) await store_default.set({ surveys: prevSurveys });
     return newSurveys;
   }
-  var NewSurveyNotificationsEnhancement = class extends Enhancement {
+  var NewSurveyNotificationsEnhancement = class extends BaseEnhancement {
     async apply() {
       const surveys = this.adapter.getSurveyElements();
       if (surveys.length === 0) return;
@@ -991,7 +981,7 @@
       return survey.textContent?.match(/\d+(\.\d+)?/)?.[0];
     }
     buildNotification(survey, surveyId, assets) {
-      const surveyTitle = this.adapter.getStudyTitle(survey)?.textContent;
+      const surveyTitle = this.adapter.getSurveyTitle(survey)?.textContent;
       const rewardElement = this.adapter.getRewardElement(survey);
       const hourlyRateElement = this.adapter.getHourlyRateElement(survey);
       const displaySymbol = rewardElement ? this.adapter.getCurrencyInfo(rewardElement).displaySymbol : "";
@@ -1013,7 +1003,7 @@
         })
       };
     }
-    revert() {
+    async revert() {
     }
   };
   var newSurveyNotificationsEnhancement = new NewSurveyNotificationsEnhancement();
@@ -1021,7 +1011,7 @@
   // src/features/rates.ts
   async function fetchRates() {
     const { timestamp, ...conversionRates } = structuredClone(
-      defaultVMSettings.conversionRates
+      defaultSiteSettings.conversionRates
     );
     const currencies = Object.keys(
       conversionRates
@@ -1081,7 +1071,7 @@
       currency
     }).formatToParts(0).find((part) => part.type === "currency")?.value;
   }
-  var ConvertCurrencyEnhancement = class extends Enhancement {
+  var ConvertCurrencyEnhancement = class extends BaseEnhancement {
     async apply() {
       const elements = this.adapter.getRewardElements();
       const { selectedCurrency, conversionRates } = await store_default.get([
@@ -1100,6 +1090,7 @@
           sourceText = element.textContent || "";
           const sourceSymbol2 = this.adapter.getInitCurrencyInfo(element);
           element.classList.add(`source-${sourceSymbol2}`);
+          element.setAttribute("source", sourceSymbol2 ?? "");
         }
         const { sourceSymbol, displaySymbol } = this.adapter.getCurrencyInfo(element);
         if (sourceSymbol === selectedSymbol) {
@@ -1128,7 +1119,7 @@
       }
       element.classList.add(display);
     }
-    revert() {
+    async revert() {
       document.querySelectorAll("[data-original-text]").forEach((el) => {
         el.textContent = el.getAttribute("data-original-text") || "";
         el.removeAttribute("data-original-text");
@@ -1143,7 +1134,7 @@
       });
     }
   };
-  var HighlightRatesEnhancement = class extends Enhancement {
+  var HighlightRatesEnhancement = class extends BaseEnhancement {
     async apply() {
       const elements = this.adapter.getHourlyRateElements();
       for (const element of elements) {
@@ -1161,7 +1152,7 @@
           element.classList.add("pe-rate-highlight");
       }
     }
-    revert() {
+    async revert() {
       const elements = document.querySelectorAll(".pe-rate-highlight");
       for (const el of elements) {
         if (!el) continue;
@@ -1177,9 +1168,10 @@
   function formatSettingString(setting) {
     return setting.replace("enable", "").split(/(?=[A-Z])/).join(" ");
   }
-  var UIEnhancement = class {
+  var UIEnhancement = class extends BaseEnhancement {
     controller;
     constructor() {
+      super();
       this.controller = new AbortController();
     }
     async apply() {
@@ -1197,7 +1189,7 @@
       settingsContainer.id = "pe-settings-container";
       const settings = await store_default.get(
         Object.keys(
-          defaultVMSettings
+          defaultSiteSettings
         )
       );
       const createSettingElement = (labelText, buttonText, setting, onClick) => {
@@ -1337,6 +1329,61 @@
   };
   var uiEnhancement = new UIEnhancement();
 
+  // src/lib/runEnhancements.ts
+  var ENHANCEMENT_CONFIG = {
+    enableCurrencyConversion: {
+      module: "CurrencyConversion",
+      enhancement: convertCurrencyEnhancement
+    },
+    enableHighlightRates: {
+      module: "HighlightRates",
+      enhancement: highlightRatesEnhancement
+    },
+    enableSurveyLinks: {
+      module: "SurveyLinks",
+      enhancement: surveyLinksEnhancement
+    },
+    enableNewSurveyNotifications: {
+      module: "NewSurveyNotifications",
+      enhancement: newSurveyNotificationsEnhancement
+    }
+  };
+  var ENHANCEMENT_SETTING_KEYS = Object.keys(
+    ENHANCEMENT_CONFIG
+  );
+  var adapter2 = getSiteAdapter_default();
+  var excluded = /* @__PURE__ */ new Set([
+    "enableCurrencyConversion"
+  ]);
+  async function runEnhancements() {
+    log("Running enhancements...");
+    const settings = await store_default.get([...ENHANCEMENT_SETTING_KEYS, "ui"]);
+    const { ui: uiSetting, enableCurrencyConversion } = settings;
+    const cleanup = [];
+    const tasks = [];
+    for (const key of ENHANCEMENT_SETTING_KEYS) {
+      if (excluded.has(key)) continue;
+      const { module, enhancement } = ENHANCEMENT_CONFIG[key];
+      if (!adapter2.hasModule(module)) continue;
+      cleanup.push(enhancement);
+      if (settings[key]) tasks.push(enhancement);
+    }
+    if (adapter2.hasModule("UI")) {
+      cleanup.push(uiEnhancement);
+      if (uiSetting.visible) tasks.push(uiEnhancement);
+    }
+    await Promise.all(cleanup.map((task) => task.revert()));
+    if (adapter2.hasModule("CurrencyConversion")) {
+      await convertCurrencyEnhancement.revert();
+      if (enableCurrencyConversion) {
+        await updateRates();
+        await convertCurrencyEnhancement.apply();
+      }
+    }
+    await Promise.all(tasks.map((task) => task.apply()));
+  }
+  var runEnhancements_default = runEnhancements;
+
   // src/main.ts
   (async function() {
     "use strict";
@@ -1405,30 +1452,39 @@
     `);
     function debounce(fn, delay = 300) {
       let timeoutId;
-      let runId = 0;
       return (...args) => {
-        runId++;
-        const currentRun = runId;
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-          if (currentRun !== runId) return;
           Promise.resolve(fn(...args)).catch(console.error);
         }, delay);
       };
     }
-    await runEnhancements();
+    let observer;
+    const observerConfig = { childList: true, subtree: true };
+    async function safelyRunEnhancements() {
+      observer.disconnect();
+      try {
+        await runEnhancements_default();
+      } finally {
+        observer.observe(document.body, observerConfig);
+      }
+    }
     const debounced = debounce(async () => {
-      await runEnhancements();
+      observer.disconnect();
+      try {
+        await runEnhancements_default();
+      } finally {
+        observer.observe(document.body, observerConfig);
+      }
     }, 300);
-    const observer = new MutationObserver((mutations) => {
+    observer = new MutationObserver((mutations) => {
       const hasChanges = mutations.some(
         (m) => m.addedNodes.length > 0 || m.removedNodes.length > 0
       );
       if (!hasChanges) return;
       debounced();
     });
-    const config = { childList: true, subtree: true };
-    observer.observe(document.body, config);
+    await safelyRunEnhancements();
     const ms = getRandomTimeoutMs();
     const pageReloadTimeout = scheduleTimeout(() => {
       if (!document.hidden) {
@@ -1438,8 +1494,8 @@
       log("Refreshing page...");
       location.reload();
     }, ms);
-    const adapter2 = getSiteAdapter_default();
-    if (adapter2.settings.enableAutoReload) {
+    const adapter3 = getSiteAdapter_default();
+    if (adapter3.settings.enableAutoReload) {
       log("Page refresh scheduled.");
       pageReloadTimeout.start();
     }
@@ -1451,12 +1507,12 @@
         }
         commandIds.length = 0;
         const {
-          ui: { hidden }
+          ui: { visible }
         } = await store_default.get(["ui"]);
         const id = GM.registerMenuCommand(
-          `${hidden ? "Show" : "Hide"} Settings UI`,
+          `${visible ? "Hide" : "Show"} Settings UI`,
           async () => {
-            await store_default.update({ ui: { hidden: !hidden } });
+            await store_default.update({ ui: { visible: !visible } });
           }
         );
         commandIds.push(id);

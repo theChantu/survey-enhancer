@@ -1,8 +1,8 @@
-import type { VMSettings } from "../lib/types";
+import type { SiteSettings } from "../lib/types";
 
 // TODO: Have a fallback rate of 1 for each conversion rate
-// Instead of storing USD: 1, GBP: 1 and etc, initialize automatically with fetchedRate || 1, if fetch fails
-const defaultVMSettings = Object.freeze({
+// Instead of storing USD: 1, GBP: 1 and etc, initialize automatically with fetchedRate ?? 1, if fetch fails
+const defaultSiteSettings = Object.freeze({
     conversionRates: {
         timestamp: 0,
         USD: { rates: { GBP: 0.74, USD: 1 } },
@@ -15,7 +15,7 @@ const defaultVMSettings = Object.freeze({
     enableSurveyLinks: true,
     enableNewSurveyNotifications: true,
     surveys: {},
-    ui: { initialized: false, hidden: true, position: { left: 0, top: 0 } },
-}) satisfies VMSettings;
+    ui: { initialized: false, visible: true, position: { left: 0, top: 0 } },
+}) satisfies SiteSettings;
 
-export { defaultVMSettings };
+export { defaultSiteSettings };

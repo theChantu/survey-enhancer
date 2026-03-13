@@ -5,7 +5,14 @@ type Enhancement = {
 
 type Currencies = "USD" | "GBP";
 
-type VMSettings = {
+// TODO: Implement global settings
+// e.g., global: { conversionRates: {} }
+
+// TODO: Each site will have its unique namespace
+// e.g., prolific: { enableCurrencyConversion: true }, cloudresearch: { enableCurrencyConversion: false }
+// namespace key will be set to siteName from the adapter
+
+type SiteSettings = {
     conversionRates: {
         timestamp: number;
         USD: { rates: Record<Currencies, number> };
@@ -20,9 +27,9 @@ type VMSettings = {
     surveys: Record<string, ReturnType<typeof Date.now>>;
     ui: {
         initialized?: boolean;
-        hidden?: boolean;
+        visible?: boolean;
         position?: { left: number; top: number };
     };
 };
 
-export type { Enhancement, VMSettings, Currencies };
+export type { Enhancement, SiteSettings, Currencies };

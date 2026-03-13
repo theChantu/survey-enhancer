@@ -2,6 +2,7 @@ import { BaseAdapter } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
 
 import type { AdapterSettings } from "./BaseAdapter";
+import type { ModuleName } from "./modules/BaseModule";
 
 const PROLIFIC_SETTINGS: AdapterSettings = {
     enableAutoReload: false,
@@ -19,6 +20,14 @@ export class ProlificAdapter extends BaseAdapter {
         );
     }
 
+    override modules: readonly ModuleName[] = [
+        "CurrencyConversion",
+        "HighlightRates",
+        "NewSurveyNotifications",
+        "SurveyLinks",
+        "UI",
+    ];
+
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>(
             'li[data-testid^="study-"]',
@@ -33,7 +42,7 @@ export class ProlificAdapter extends BaseAdapter {
         return el.querySelector<HTMLElement>("div.study-content");
     }
 
-    getStudyTitle(el: HTMLElement) {
+    getSurveyTitle(el: HTMLElement) {
         return el.querySelector<HTMLElement>("h2") ?? null;
     }
 

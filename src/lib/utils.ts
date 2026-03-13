@@ -1,12 +1,4 @@
 import store from "../store/store";
-import {
-    convertCurrencyEnhancement,
-    highlightRatesEnhancement,
-    newSurveyNotificationsEnhancement,
-    surveyLinksEnhancement,
-    uiEnhancement,
-    updateRates,
-} from "../features";
 
 let debugEnabled = false;
 
@@ -77,53 +69,10 @@ function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
 
-async function runEnhancements() {
-    log("Running enhancements...");
-    const {
-        enableCurrencyConversion,
-        enableHighlightRates,
-        enableSurveyLinks,
-        enableNewSurveyNotifications,
-        ui: { hidden },
-    } = await store.get([
-        "enableCurrencyConversion",
-        "enableHighlightRates",
-        "enableSurveyLinks",
-        "enableNewSurveyNotifications",
-        "ui",
-    ]);
-
-    await Promise.all([
-        !enableCurrencyConversion && convertCurrencyEnhancement.revert(),
-        !enableHighlightRates && highlightRatesEnhancement.revert(),
-        !enableSurveyLinks && surveyLinksEnhancement.revert(),
-        !enableNewSurveyNotifications &&
-            newSurveyNotificationsEnhancement.revert(),
-        hidden && uiEnhancement.revert(),
-    ]);
-
-    // Fetch the latest currency rates before conversion
-    if (enableCurrencyConversion) {
-        await updateRates();
-    }
-
-    // Currency conversion must happen first
-    enableCurrencyConversion && (await convertCurrencyEnhancement.apply());
-
-    await Promise.all([
-        enableHighlightRates && highlightRatesEnhancement.apply(),
-        enableSurveyLinks && surveyLinksEnhancement.apply(),
-        enableNewSurveyNotifications &&
-            newSurveyNotificationsEnhancement.apply(),
-        !hidden && uiEnhancement.apply(),
-    ]);
-}
-
 initDebug();
 export {
     log,
     clamp,
-    runEnhancements,
     extractSymbol,
     getRandomTimeoutMs,
     scheduleTimeout,
