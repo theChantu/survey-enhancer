@@ -1,4 +1,4 @@
-# Prolific Enhancer
+# Survey Enhancer
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/github/package-json/v/theChantu/prolific-enhancer?color=gre)
