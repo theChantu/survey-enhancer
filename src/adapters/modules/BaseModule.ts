@@ -2,7 +2,6 @@ export type ModuleName =
     | "CurrencyConversion"
     | "HighlightRates"
     | "NewSurveyNotifications"
-    | "SurveyLinks"
-    | "UI";
+    | "SurveyLinks";
 
 export default interface BaseModule {}

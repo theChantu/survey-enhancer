@@ -2,7 +2,6 @@ import { BaseAdapter } from "./BaseAdapter";
 import { sites } from "./sites";
 
 import type { AdapterSettings } from "./BaseAdapter";
-import type { ModuleName } from "./modules/BaseModule";
 import type CurrencyConversion from "./modules/CurrencyConversion";
 
 const CLOUD_RESEARCH_SETTINGS: AdapterSettings = {
@@ -28,13 +27,7 @@ export class CloudResearchAdapter
         super(CLOUD_RESEARCH_URL, CLOUD_RESEARCH_SETTINGS, overrides);
     }
 
-    override modules: readonly ModuleName[] = [
-        "CurrencyConversion",
-        "HighlightRates",
-        "NewSurveyNotifications",
-        "SurveyLinks",
-        "UI",
-    ];
+    override modules = sites[HOST].modules;
 
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>("div.project-card");

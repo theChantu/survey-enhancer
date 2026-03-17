@@ -3,7 +3,6 @@ import { extractSymbol } from "../lib/utils";
 import { sites } from "./sites";
 
 import type { AdapterSettings } from "./BaseAdapter";
-import type { ModuleName } from "./modules/BaseModule";
 
 const PROLIFIC_SETTINGS: AdapterSettings = {
     enableAutoReload: false,
@@ -20,13 +19,7 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
         super(PROLIFIC_URL, PROLIFIC_SETTINGS, overrides);
     }
 
-    override modules: readonly ModuleName[] = [
-        "CurrencyConversion",
-        "HighlightRates",
-        "NewSurveyNotifications",
-        "SurveyLinks",
-        "UI",
-    ];
+    override modules = sites[HOST].modules;
 
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>(
