@@ -1,11 +1,12 @@
 import type { Settings, SettingsUpdate } from "@/store/createStore";
+import type { SiteName } from "@/adapters/sites";
 
 type StoreUpdateMessage = SettingsUpdate & {
-    siteName: string;
+    siteName: SiteName;
 };
 
 type StoreSetMessage = SettingsUpdate & {
-    siteName: string;
+    siteName: SiteName;
 };
 
 type StoreFetchMessage = {
@@ -27,7 +28,7 @@ interface MessageMap {
 }
 
 interface ResponseMap {
-    "store-fetch": { siteName: string; data: Settings } | null;
+    "store-fetch": { siteName: SiteName; data: Settings } | null;
     "survey-notification": void;
     "store-update": void;
     "store-set": void;

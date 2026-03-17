@@ -1,13 +1,13 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { defaultSettings } from "@/store/defaultSettings";
-    import { sites } from "@/adapters/sites";
+    import { sites, type SupportedSites } from "@/adapters/sites";
     import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
     import Toggle from "@/components/Toggle.svelte";
     import ResearcherList from "@/components/ResearcherList.svelte";
     import {
         Settings as SettingsIcon,
         CircleDollarSign,
-        CircleAlert,
         ChevronDown,
         Bell,
         Bug,
@@ -18,25 +18,31 @@
     import type { Settings, SettingsUpdate } from "@/store/createStore";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
 
-    let invalidUrl = false;
-    let siteName = "";
-    let settings: Settings | null = null;
+    const siteKeys = Object.keys(sites) as SupportedSites[];
+
+    let selectedSite: SupportedSites = siteKeys[0];
+
+    let loadedSites = {} as Partial<Record<SupportedSites, Settings>>;
+
+    $: currentSite = loadedSites[selectedSite];
 
     function updateSetting(values: SettingsUpdate) {
-        if (!siteName || !settings) return;
-        settings = { ...settings, ...values };
+        const current = loadedSites[selectedSite];
+        if (!current) return;
+        loadedSites[selectedSite] = { ...current, ...values };
         sendExtensionMessage({
             type: "store-update",
-            data: { siteName, ...values },
+            data: { siteName: sites[selectedSite].name, ...values },
         });
     }
 
     function setSetting(values: SettingsUpdate) {
-        if (!siteName || !settings) return;
-        settings = { ...settings, ...values };
+        const current = loadedSites[selectedSite];
+        if (!current) return;
+        loadedSites[selectedSite] = { ...current, ...values };
         sendExtensionMessage({
             type: "store-set",
-            data: { siteName, ...values },
+            data: { siteName: sites[selectedSite].name, ...values },
         });
     }
 
@@ -46,19 +52,23 @@
     >;
 
     function addResearcher(key: ResearcherKey, name: string) {
-        if (!settings || settings[key].includes(name)) return;
-        updateSetting({ [key]: [...settings[key], name] });
+        const loadedSite = loadedSites[selectedSite];
+        if (!loadedSite || loadedSite[key].includes(name)) return;
+        updateSetting({ [key]: [...loadedSite[key], name] });
     }
 
     function removeResearcher(key: ResearcherKey, name: string) {
-        if (!settings) return;
-        updateSetting({ [key]: settings[key].filter((n) => n !== name) });
+        const loadedSite = loadedSites[selectedSite];
+        if (!loadedSite) return;
+        updateSetting({
+            [key]: loadedSite[key].filter((n) => n !== name),
+        });
     }
 
     type ResettableKey = Exclude<keyof typeof defaultSettings, "enableDebug">;
 
     function resetKey(key: ResettableKey) {
-        if (!settings) return;
+        if (!currentSite) return;
         setSetting({ [key]: defaultSettings[key] });
     }
 
@@ -71,81 +81,70 @@
         return key.replace(/([A-Z])/g, " $1").toLowerCase();
     }
 
-    onMount(() => {
-        (async () => {
-            const [tab] = await browser.tabs.query({
-                active: true,
-                currentWindow: true,
+    async function loadSite(siteUrl: SupportedSites) {
+        if (siteUrl in loadedSites) return;
+        try {
+            const response = await sendExtensionMessage({
+                type: "store-fetch",
+                data: {
+                    url: `https://${siteUrl}`,
+                    settings: Object.keys(
+                        defaultSettings,
+                    ) as (keyof Settings)[],
+                },
             });
+            if (response?.data) loadedSites[siteUrl] = response.data;
+        } catch (error) {
+            console.error(error);
+        }
+    }
 
-            if (!tab.id || !tab.url) {
-                invalidUrl = true;
-                return;
-            }
-
+    onMount(async () => {
+        // Try to detect the current site and load it by default
+        const [tab] = await browser.tabs.query({
+            active: true,
+            currentWindow: true,
+        });
+        if (tab?.url) {
             try {
-                const response = await sendExtensionMessage({
-                    type: "store-fetch",
-                    data: {
-                        url: tab.url,
-                        settings: Object.keys(
-                            defaultSettings,
-                        ) as (keyof Settings)[],
-                    },
-                });
-
-                if (!response) {
-                    invalidUrl = true;
-                    return;
-                }
-
-                siteName = response.siteName;
-                settings = response.data;
-            } catch {
-                invalidUrl = true;
+                const host = new URL(tab.url).hostname as SupportedSites;
+                if (host in sites) selectedSite = host;
+            } catch (error) {
+                console.error(error);
             }
-        })();
+        }
+
+        await loadSite(selectedSite);
     });
 </script>
 
-{#if invalidUrl}
-    <div class="popup">
-        <div class="card error-card">
-            <CircleAlert size={22} strokeWidth={2} />
-            <div>
-                <div class="error-title">Unsupported site</div>
-                <div class="error-description">
-                    Navigate to a supported site to configure settings.
-                </div>
-                <ul class="supported-sites">
-                    {#each Object.entries(sites) as [host, site]}
-                        <li>
-                            <a
-                                href="https://{host}{site.surveyPath}"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                {capitalize(site.name)}
-                            </a>
-                        </li>
-                    {/each}
-                </ul>
-            </div>
+<div class="popup">
+    <div class="header">
+        <div class="site-select-wrap">
+            <select
+                class="site-select"
+                value={selectedSite}
+                on:change={(e: { currentTarget: HTMLSelectElement }) => {
+                    selectedSite = e.currentTarget.value as SupportedSites;
+                    loadSite(selectedSite);
+                }}
+            >
+                {#each siteKeys as siteUrl}
+                    <option value={siteUrl}>
+                        {capitalize(sites[siteUrl].name)}
+                    </option>
+                {/each}
+            </select>
+            <ChevronDown size={14} />
         </div>
     </div>
-{:else if !settings}
-    <div class="popup">
+
+    {#if !currentSite}
         <div class="card loading-card">
             <LoaderCircle size={18} class="spinner-icon" />
             <span>Loading settings...</span>
         </div>
-    </div>
-{:else}
-    <div class="popup">
-        <div class="header">
-            <h1>{siteName}</h1>
-        </div>
-
+    {:else}
         <div class="card section">
             <h2>
                 <SettingsIcon size={14} strokeWidth={2.5} />
@@ -155,20 +154,21 @@
             <Toggle
                 title="Survey links"
                 description="Show direct survey links when available."
-                value={settings.enableSurveyLinks}
+                value={currentSite?.enableSurveyLinks}
                 onClick={() =>
                     updateSetting({
-                        enableSurveyLinks: !settings?.enableSurveyLinks,
+                        enableSurveyLinks: !currentSite?.enableSurveyLinks,
                     })}
             />
 
             <Toggle
                 title="Highlight rates"
                 description="Visually emphasize stronger survey rates."
-                value={settings.enableHighlightRates}
+                value={currentSite?.enableHighlightRates}
                 onClick={() =>
                     updateSetting({
-                        enableHighlightRates: !settings?.enableHighlightRates,
+                        enableHighlightRates:
+                            !currentSite?.enableHighlightRates,
                     })}
             />
         </div>
@@ -181,11 +181,11 @@
             <Toggle
                 title="Currency conversion"
                 description="Convert rewards into your selected currency."
-                value={settings.enableCurrencyConversion}
+                value={currentSite?.enableCurrencyConversion}
                 onClick={() =>
                     updateSetting({
                         enableCurrencyConversion:
-                            !settings?.enableCurrencyConversion,
+                            !currentSite?.enableCurrencyConversion,
                     })}
             />
             <div class="field">
@@ -193,7 +193,7 @@
                 <div class="select-wrap">
                     <select
                         id="currency"
-                        bind:value={settings.selectedCurrency}
+                        bind:value={currentSite.selectedCurrency}
                         on:change={(e) =>
                             updateSetting({
                                 selectedCurrency: e.currentTarget
@@ -216,26 +216,26 @@
             <Toggle
                 title="New survey notifications"
                 description="Send a desktop notification when a new survey appears."
-                value={settings.enableNewSurveyNotifications}
+                value={currentSite?.enableNewSurveyNotifications}
                 onClick={() =>
                     updateSetting({
                         enableNewSurveyNotifications:
-                            !settings?.enableNewSurveyNotifications,
+                            !currentSite?.enableNewSurveyNotifications,
                     })}
             />
-            {#if settings.enableNewSurveyNotifications}
+            {#if currentSite?.enableNewSurveyNotifications}
                 <ResearcherList
                     title="Included researchers"
-                    names={settings.includedResearchers}
-                    suggestions={Object.keys(settings.cachedResearchers)}
+                    names={currentSite?.includedResearchers}
+                    suggestions={Object.keys(currentSite?.cachedResearchers)}
                     onAdd={(name) => addResearcher("includedResearchers", name)}
                     onRemove={(name) =>
                         removeResearcher("includedResearchers", name)}
                 />
                 <ResearcherList
                     title="Excluded researchers"
-                    names={settings.excludedResearchers}
-                    suggestions={Object.keys(settings.cachedResearchers)}
+                    names={currentSite?.excludedResearchers}
+                    suggestions={Object.keys(currentSite?.cachedResearchers)}
                     onAdd={(name) => addResearcher("excludedResearchers", name)}
                     onRemove={(name) =>
                         removeResearcher("excludedResearchers", name)}
@@ -251,14 +251,14 @@
             <Toggle
                 title="Debug mode"
                 description="Log extension activity to the browser console."
-                value={settings.enableDebug}
+                value={currentSite?.enableDebug}
                 onClick={() =>
                     updateSetting({
-                        enableDebug: !settings?.enableDebug,
+                        enableDebug: !currentSite?.enableDebug,
                     })}
             />
 
-            {#if settings.enableDebug}
+            {#if currentSite?.enableDebug}
                 <div class="debug-resets">
                     <span class="list-label">Reset to default</span>
                     <div class="debug-buttons">
@@ -274,8 +274,8 @@
                 </div>
             {/if}
         </div>
-    </div>
-{/if}
+    {/if}
+</div>
 
 <style>
     :global(body) {
@@ -297,12 +297,41 @@
         gap: 16px;
     }
 
-    .header h1 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 600;
+    .site-select-wrap {
+        position: relative;
+        color: #6b7280;
+    }
+
+    .site-select-wrap :global(svg) {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .site-select {
+        width: 100%;
+        padding: 8px 32px 8px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
         color: #f3f4f6;
-        text-transform: capitalize;
+        font-size: 0.9rem;
+        font-weight: 600;
+        font-family: inherit;
+        outline: none;
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .site-select:focus {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .site-select option {
+        background: #1a1d21;
+        color: #d1d5db;
     }
 
     .card {
@@ -350,7 +379,7 @@
         pointer-events: none;
     }
 
-    select {
+    .select-wrap select {
         width: 100%;
         padding: 8px 32px 8px 10px;
         border-radius: 6px;
@@ -364,12 +393,12 @@
         cursor: pointer;
     }
 
-    select option {
+    .select-wrap select option {
         background: #1a1d21;
         color: #d1d5db;
     }
 
-    select:focus {
+    .select-wrap select:focus {
         border-color: rgba(255, 255, 255, 0.2);
     }
 
@@ -391,52 +420,6 @@
         to {
             transform: rotate(360deg);
         }
-    }
-
-    .error-card {
-        padding: 20px 16px;
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        color: #ef4444;
-    }
-
-    .error-card :global(svg) {
-        flex-shrink: 0;
-        margin-top: 1px;
-    }
-
-    .error-title {
-        font-size: 0.86rem;
-        font-weight: 600;
-        color: #fca5a5;
-    }
-
-    .error-description {
-        margin-top: 2px;
-        font-size: 0.76rem;
-        line-height: 1.4;
-        color: #6b7280;
-    }
-
-    .supported-sites {
-        margin: 8px 0 0;
-        padding: 0;
-        list-style: none;
-        display: flex;
-        gap: 8px;
-    }
-
-    .supported-sites a {
-        color: #818cf8;
-        text-decoration: none;
-        font-size: 0.76rem;
-        text-transform: capitalize;
-    }
-
-    .supported-sites a:hover {
-        color: #a5b4fc;
-        text-decoration: underline;
     }
 
     .debug-resets {
