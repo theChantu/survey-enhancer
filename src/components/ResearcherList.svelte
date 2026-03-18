@@ -13,7 +13,9 @@
     $: filtered =
         input.length > 0
             ? suggestions.filter(
-                  (s) => s.includes(input.toLowerCase()) && !names.includes(s),
+                  (s) =>
+                      s.includes(cleanResearcherName(input)) &&
+                      !names.includes(s),
               )
             : [];
 

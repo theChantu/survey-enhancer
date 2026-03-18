@@ -22,7 +22,6 @@
     const siteKeys = Object.keys(sites) as SupportedSites[];
 
     let selectedSite: SupportedSites = siteKeys[0];
-
     let loadedSites = {} as Partial<Record<SupportedSites, Settings>>;
 
     $: currentSite = loadedSites[selectedSite];

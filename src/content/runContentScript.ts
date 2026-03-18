@@ -71,7 +71,8 @@ async function runContentScript(ctx: ContentScriptContext) {
         },
     })) ?? { data: defaultSettings };
 
-    const { minReloadInterval, maxReloadInterval } = siteSettings?.data;
+    const { minReloadInterval, maxReloadInterval, enableAutoReload } =
+        siteSettings?.data;
 
     const ms = getRandomTimeoutMs(minReloadInterval, maxReloadInterval);
     const pageReloadTimeout = scheduleTimeout(() => {
@@ -94,8 +95,8 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    if (siteSettings.data.enableAutoReload) {
-        handleAutoReloadSettingChange(siteSettings.data.enableAutoReload);
+    if (enableAutoReload) {
+        handleAutoReloadSettingChange(enableAutoReload);
     }
 
     onExtensionMessage("store-changed", (payload) => {
@@ -103,12 +104,12 @@ async function runContentScript(ctx: ContentScriptContext) {
             siteSettings.data = { ...siteSettings.data, ...payload };
         }
 
-        const { enableAutoReload } = payload;
+        const { minReloadInterval, maxReloadInterval, enableAutoReload } =
+            payload;
         if (enableAutoReload !== undefined) {
             handleAutoReloadSettingChange(enableAutoReload);
         }
 
-        const { minReloadInterval, maxReloadInterval } = payload;
         if (
             minReloadInterval !== undefined ||
             maxReloadInterval !== undefined
@@ -125,7 +126,7 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
 
         // Ignore if only surveys changed
-        const keys = Object.keys(payload);
+        const keys = Object.keys(payload) as (keyof typeof payload)[];
         if (keys.length === 1 && keys[0] === "surveys") return;
 
         debounced(payload);
