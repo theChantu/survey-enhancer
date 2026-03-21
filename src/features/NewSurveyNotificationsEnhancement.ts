@@ -161,6 +161,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const displaySymbol = rewardElement
             ? this.adapter.getCurrencyInfo(rewardElement).displaySymbol
             : "";
+
         const rewardText =
             (rewardElement && this.extractSurveyRate(rewardElement)) ||
             "Unknown reward";

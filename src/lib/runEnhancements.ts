@@ -55,7 +55,6 @@ const adapter = getSiteAdapter();
 
 async function runEnhancements(changed?: SettingsUpdate) {
     log("Running enhancements...");
-    adapter.prepareElements();
 
     if (changed) {
         for (const config of SORTED) {
@@ -76,6 +75,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
 
             if (!keyChanged && !triggerChanged) continue;
 
+            adapter.prepareElements();
             if (keyChanged && !enabled) {
                 await config.enhancement.revert();
             } else {
@@ -91,6 +91,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
         if (!adapter.hasModule(config.module)) continue;
         const enabled = settings[config.enableKey];
 
+        adapter.prepareElements();
         if (enabled) {
             await config.enhancement.apply();
         } else {
