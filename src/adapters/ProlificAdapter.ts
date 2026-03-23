@@ -3,19 +3,11 @@ import { extractSymbol } from "../lib/utils";
 import { sites } from "./sites";
 
 const HOST = "app.prolific.com";
-const PROLIFIC_URL = {
-    ...sites[HOST],
-    host: HOST,
-} as const;
 
 export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     constructor() {
-        super(PROLIFIC_URL);
+        super({ ...sites[HOST], host: HOST });
     }
-
-    override modules = sites[HOST].modules;
-
-    override networkPatterns = {};
 
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>(

@@ -75,7 +75,7 @@ function getSymbol(currency: Currency) {
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
         const { selectedCurrency, conversionRates } = await store.get(
-            this.adapter.url.name,
+            this.adapter.config.name,
             ["selectedCurrency", "conversionRates"],
         );
 
@@ -155,7 +155,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         }
 
         if (updated) {
-            await store.set(this.adapter.url.name, {
+            await store.set(this.adapter.config.name, {
                 conversionRates: rates,
             });
         }

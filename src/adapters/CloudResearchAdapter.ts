@@ -2,26 +2,11 @@ import { BaseAdapter } from "./BaseAdapter";
 import { sites } from "./sites";
 
 const HOST = "connect.cloudresearch.com";
-const CLOUD_RESEARCH_URL = {
-    ...sites[HOST],
-    host: HOST,
-    suffix: "details",
-    query: {
-        page: 1,
-        size: 100,
-    },
-} as const;
 
 export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
     constructor() {
-        super(CLOUD_RESEARCH_URL);
+        super({ ...sites[HOST], host: HOST });
     }
-
-    override modules = sites[HOST].modules;
-
-    override networkPatterns = {
-        surveyCompletion: "/submitRedirect",
-    };
 
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>("div.project-card");

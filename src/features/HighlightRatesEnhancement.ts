@@ -22,7 +22,7 @@ function rateToColor(rate: number, min = 7, max = 15) {
 
 class HighlightRatesEnhancement extends BaseEnhancement {
     async apply() {
-        const { conversionRates } = await store.get(this.adapter.url.name, [
+        const { conversionRates } = await store.get(this.adapter.config.name, [
             "conversionRates",
         ]);
 

@@ -3,28 +3,20 @@ import debounce from "@/lib/debounce";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
 import type { ModuleName } from "./modules/BaseModule";
-import type { SupportedSites, sites } from "./sites";
+import type { SiteInfo, SupportedSites, sites } from "./sites";
 
-export type UrlSettings<H extends SupportedSites = SupportedSites> =
-    (typeof sites)[H] & {
-        host: H;
-        suffix?: string;
-        query?: Record<string, string | number | boolean>;
-    };
-
-// TODO: Allow AdapterSettings to inherit these settings based on whatever Module is extended
-// e.g., CurrencyConversion would pass enableCurrencyConversion
-// enableCurrencyConversion: boolean;
-// enableHighlightRates: boolean;
-// enableSurveyLinks: boolean;
-// enableNewSurveyNotifications: boolean;
+export type AdapterConfig<H extends SupportedSites = SupportedSites> =
+    (typeof sites)[H] &
+        SiteInfo & {
+            host: H;
+        };
 
 type CurrencyInfo = {
     displaySymbol: string | null;
     sourceSymbol: string | null;
 };
 
-interface EventResponseMap {
+export interface EventResponseMap {
     surveyCompletion: NetworkEvent;
     newSurvey: NetworkEvent;
 }
@@ -38,22 +30,21 @@ type NetworkEvent = {
 };
 
 export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
-    readonly url: Readonly<UrlSettings<H>>;
-    abstract readonly modules: readonly ModuleName[];
+    readonly config: Readonly<AdapterConfig<H>>;
 
-    constructor(url: UrlSettings<H>) {
-        this.url = url;
+    constructor(config: AdapterConfig<H>) {
+        this.config = config;
     }
 
     private _moduleSet?: ReadonlySet<ModuleName>;
 
     hasModule(module: ModuleName): boolean {
-        this._moduleSet ??= new Set(this.modules);
+        this._moduleSet ??= new Set(this.config.modules);
         return this._moduleSet.has(module);
     }
 
     get origin(): string {
-        return `https://${this.url.host}`;
+        return `https://${this.config.host}`;
     }
 
     buildUrl(segments: string[]) {
@@ -61,7 +52,7 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     }
 
     get iconUrl(): string {
-        return this.buildUrl([this.url.iconPath]);
+        return this.buildUrl([this.config.iconPath]);
     }
 
     protected queryText(el: HTMLElement, selector: string): string | null {
@@ -95,13 +86,11 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         }
     }
 
-    protected networkPatterns: Partial<Record<EventType, string>> = {};
-
     protected handleDomMutation(mutations: MutationRecord[]) {}
 
     protected matchNetworkEvent(event: NetworkEvent): EventType | null {
         for (const [eventType, pattern] of Object.entries(
-            this.networkPatterns,
+            this.config.networkPatterns,
         ) as [EventType, string][]) {
             if (event.url.includes(pattern)) {
                 return eventType;

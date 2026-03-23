@@ -53,7 +53,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     let siteSettings = (await sendExtensionMessage({
         type: "store-fetch",
         data: {
-            siteName: adapter.url.name,
+            siteName: adapter.config.name,
             settings: defaultSettingsKeys,
         },
     })) ?? { data: defaultSettings };
@@ -124,7 +124,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     adapter.on("surveyCompletion", (data) => {
         sendExtensionMessage({
             type: "track-survey-completion",
-            data: { siteName: adapter.url.name, url: data.url },
+            data: { siteName: adapter.config.name, url: data.url },
         });
     });
 }

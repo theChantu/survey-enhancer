@@ -26,7 +26,7 @@ function getSiteAdapter(input?: string): SiteAdapter | null {
     const host = input ? new URL(input).hostname : window.location.hostname;
 
     for (const adapter of siteAdapters) {
-        if (matchesHost(host, adapter.url.host)) {
+        if (matchesHost(host, adapter.config.host)) {
             return adapter;
         }
     }

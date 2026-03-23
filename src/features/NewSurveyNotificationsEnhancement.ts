@@ -13,7 +13,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const {
             surveys: previousSurveys,
             cachedResearchers: previousCachedResearchers,
-        } = await store.get(this.adapter.url.name, [
+        } = await store.get(this.adapter.config.name, [
             "surveys",
             "cachedResearchers",
         ]);
@@ -39,7 +39,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             );
 
         const { includedResearchers, excludedResearchers } = await store.get(
-            this.adapter.url.name,
+            this.adapter.config.name,
             ["includedResearchers", "excludedResearchers"],
         );
         const includedResearchersSet = new Set(includedResearchers);
@@ -85,7 +85,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             cachedResearchers[name] = now;
         }
 
-        await store.set(this.adapter.url.name, {
+        await store.set(this.adapter.config.name, {
             cachedResearchers,
         });
     }
@@ -125,7 +125,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             previousClone[fingerprint] = now;
         }
 
-        await store.set(this.adapter.url.name, {
+        await store.set(this.adapter.config.name, {
             surveys: previousClone,
         });
     }
@@ -169,14 +169,14 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             (hourlyRateElement && this.extractSurveyRate(hourlyRateElement)) ||
             "Unknown rate";
 
-        const { surveyPath, suffix } = this.adapter.url;
+        const { surveyPath, suffix } = this.adapter.config;
         const surveyLink = this.adapter.buildUrl([
             surveyPath,
             surveyId,
             ...(suffix ? [suffix] : []),
         ]);
 
-        const siteLabel = capitalize(this.adapter.url.name);
+        const siteLabel = capitalize(this.adapter.config.name);
 
         const notificationData = {
             title: surveyTitle ?? siteLabel,

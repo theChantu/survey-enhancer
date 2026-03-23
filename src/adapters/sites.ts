@@ -1,5 +1,6 @@
 import type { Settings } from "@/store/createStore";
 import type { ModuleName } from "./modules/BaseModule";
+import type { EventResponseMap } from "./BaseAdapter";
 
 type EnableKeys = Extract<keyof Settings, `enable${string}`>;
 
@@ -14,7 +15,10 @@ export interface SiteInfo {
     name: string;
     surveyPath: string;
     iconPath: string;
+    suffix?: string;
+    query?: Record<string, string | number | boolean>;
     modules: ModuleName[];
+    networkPatterns: Partial<Record<keyof EventResponseMap, string>>;
 }
 
 export const sites = {
@@ -28,16 +32,27 @@ export const sites = {
             "NewSurveyNotifications",
             "SurveyLinks",
         ],
+        networkPatterns: {
+            surveyCompletion: "/transition",
+        },
     },
     "connect.cloudresearch.com": {
         name: "cloudresearch",
         surveyPath: "/participant/dashboard",
         iconPath: "/participant/favicon.ico",
+        suffix: "details",
+        query: {
+            page: 1,
+            size: 100,
+        },
         modules: [
             "CurrencyConversion",
             "HighlightRates",
             "NewSurveyNotifications",
         ],
+        networkPatterns: {
+            surveyCompletion: "/submitRedirect",
+        },
     },
 } as const satisfies Record<string, SiteInfo>;
 

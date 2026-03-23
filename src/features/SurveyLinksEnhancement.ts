@@ -16,7 +16,7 @@ class SurveyLinksEnhancement extends BaseEnhancement {
                 surveyContainer.querySelector(".se-custom-btn");
             if (previousButton) continue;
 
-            const { surveyPath, suffix } = this.adapter.url;
+            const { surveyPath, suffix } = this.adapter.config;
             const surveyLink = this.adapter.buildUrl([
                 surveyPath,
                 surveyId,

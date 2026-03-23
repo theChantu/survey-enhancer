@@ -65,7 +65,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
 
             // If the key is not in the changed object, check the store
             if (enabled === undefined) {
-                const settings = await store.get(adapter.url.name, [
+                const settings = await store.get(adapter.config.name, [
                     config.enableKey,
                 ]);
                 if (!settings[config.enableKey]) continue;
@@ -85,7 +85,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
         return;
     }
 
-    const settings = await store.get(adapter.url.name, [...ENABLE_KEYS]);
+    const settings = await store.get(adapter.config.name, [...ENABLE_KEYS]);
 
     for (const config of SORTED) {
         if (!adapter.hasModule(config.module)) continue;
