@@ -129,6 +129,11 @@ function runBackgroundScript() {
             },
         });
     });
+
+    // TODO: Fetch provider API keys from the extension's storage and use them to send notifications
+    // Send a notification to each provider when a new survey is detected, including the survey title, researcher, reward, and link
+    // Events will be emitted from the adapter observeDom and observeNetwork methods
+    // Replace current mutation observer implementation in content script with the adapter observeDom method
 }
 
 export { runBackgroundScript };

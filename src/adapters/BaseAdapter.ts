@@ -24,12 +24,12 @@ type CurrencyInfo = {
     sourceSymbol: string | null;
 };
 
-type EventType = "surveyCompletion" | "newSurvey";
-
 interface EventResponseMap {
     surveyCompletion: NetworkEvent;
     newSurvey: NetworkEvent;
 }
+
+type EventType = keyof EventResponseMap;
 
 type NetworkEvent = {
     url: string;
