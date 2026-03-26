@@ -1,16 +1,16 @@
-import store from "../store/store";
 import log from "./log";
 import {
     convertCurrencyEnhancement,
     highlightRatesEnhancement,
     newSurveyNotificationsEnhancement,
     surveyLinksEnhancement,
-} from "../features";
+} from "../enhancements";
+import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import getSiteAdapter from "./getSiteAdapter";
 import { moduleToEnableKey } from "@/adapters/sites";
 
 import type { ModuleName } from "../adapters/modules/BaseModule";
-import type Enhancement from "../features/BaseEnhancement";
+import type Enhancement from "../enhancements/BaseEnhancement";
 import type { Settings, SettingsUpdate } from "@/store/createStore";
 
 type EnhancementSettingKeys = (typeof moduleToEnableKey)[ModuleName];
@@ -56,20 +56,22 @@ const adapter = getSiteAdapter();
 async function runEnhancements(changed?: SettingsUpdate) {
     log("Running enhancements...");
 
+    const response = await sendExtensionMessage({
+        type: "store-fetch",
+        data: {
+            siteName: adapter.config.name,
+            settings: ENABLE_KEYS,
+        },
+    });
+    if (!response) return;
+    const settings = response.data;
+
     if (changed) {
         for (const config of SORTED) {
             if (!adapter.hasModule(config.module)) continue;
 
             const keyChanged = config.enableKey in changed;
-            const enabled = changed[config.enableKey];
-
-            // If the key is not in the changed object, check the store
-            if (enabled === undefined) {
-                const settings = await store.get(adapter.config.name, [
-                    config.enableKey,
-                ]);
-                if (!settings[config.enableKey]) continue;
-            }
+            const enabled = settings[config.enableKey];
 
             const triggerChanged = config.triggers?.some((k) => k in changed);
 
@@ -84,8 +86,6 @@ async function runEnhancements(changed?: SettingsUpdate) {
         }
         return;
     }
-
-    const settings = await store.get(adapter.config.name, [...ENABLE_KEYS]);
 
     for (const config of SORTED) {
         if (!adapter.hasModule(config.module)) continue;

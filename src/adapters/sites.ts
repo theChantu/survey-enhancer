@@ -33,7 +33,7 @@ export const sites = {
             "SurveyLinks",
         ],
         networkPatterns: {
-            surveyCompletion: "/transition",
+            surveyCompletion: "/complete",
         },
     },
     "connect.cloudresearch.com": {

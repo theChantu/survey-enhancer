@@ -40,19 +40,26 @@ function runBackgroundScript() {
 
     onExtensionMessage("survey-notification", async (payload) => {
         const { iconUrl, title, message, surveyLink } = payload;
-        const notificationId = await browser.notifications.create({
-            type: "basic",
-            iconUrl: iconUrl ?? "",
-            title,
-            message,
-        });
 
-        notificationActions.set(notificationId, async () => {
-            await browser.tabs.create({
-                active: true,
-                url: surveyLink,
+        // TODO: Query for custom idle time from the extension's settings
+        // TODO: Route to Discord if queryState is idle
+        const state = await browser.idle.queryState(15 * 60);
+        if (state === "idle" || state === "locked") {
+            // TODO: Send notification to providers
+        } else {
+            const notificationId = await browser.notifications.create({
+                type: "basic",
+                iconUrl: iconUrl ?? "",
+                title,
+                message,
             });
-        });
+            notificationActions.set(notificationId, async () => {
+                await browser.tabs.create({
+                    active: true,
+                    url: surveyLink,
+                });
+            });
+        }
     });
 
     const store = createStore();

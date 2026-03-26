@@ -121,8 +121,6 @@
     $: siteModules = new Set(sites[selectedSite].modules);
 </script>
 
-<!-- TODO: Map modules to their respective enable toggles -->
-<!-- Loop through site modules -->
 <div class="popup">
     <div class="header">
         <div class="site-select-wrap">

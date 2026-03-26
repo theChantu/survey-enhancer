@@ -13,7 +13,7 @@ export class DiscordProvider extends BaseProvider<
         super(config);
     }
 
-    private async createChannel() {
+    private async fetchChannelId() {
         const response = await fetch(
             "https://discord.com/api/v10/users/@me/channels",
             {
@@ -30,11 +30,20 @@ export class DiscordProvider extends BaseProvider<
         return (await response.json()) as DiscordChannelResponse;
     }
 
-    async sendMessage(message: string): Promise<void> {
-        this.config.channelId ??= (await this.createChannel()).id;
-        const channelId = this.config.channelId;
+    private async getChannelId() {
+        if (!this.config.channelId) {
+            this.config.channelId = (await this.fetchChannelId()).id;
+        }
+        return this.config.channelId;
+    }
 
-        await fetch(
+    override onRetry(): void {
+        this.config.channelId = undefined;
+    }
+
+    protected async send(message: string): Promise<boolean> {
+        const channelId = await this.getChannelId();
+        const response = await fetch(
             `https://discord.com/api/v10/channels/${channelId}/messages`,
             {
                 method: "POST",
@@ -42,10 +51,9 @@ export class DiscordProvider extends BaseProvider<
                     "Content-Type": "application/json",
                     Authorization: `Bot ${this.config.botToken}`,
                 },
-                body: JSON.stringify({
-                    content: message,
-                }),
+                body: JSON.stringify({ content: message }),
             },
         );
+        return response.ok;
     }
 }

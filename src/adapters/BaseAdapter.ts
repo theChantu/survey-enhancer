@@ -16,6 +16,15 @@ type CurrencyInfo = {
     sourceSymbol: string | null;
 };
 
+// TODO: Extract these properties from each survey element
+interface SurveyInfo {
+    id: string;
+    title: string | null;
+    researcher: string | null;
+    payment: string | null;
+    rate: number | null;
+}
+
 export interface EventResponseMap {
     surveyCompletion: NetworkEvent;
     newSurvey: NetworkEvent;
