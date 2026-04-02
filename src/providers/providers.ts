@@ -13,7 +13,9 @@ const providerNames = Object.keys(providers) as (keyof typeof providers)[];
 
 export type ProviderName = (typeof providerNames)[number];
 
+type ProviderConfig<T> = { enabled: boolean } & T;
+
 export type ProviderConfigMap = {
-    discord: { botToken: string; userId: string; channelId?: string };
-    telegram: { botToken: string; chatId: string };
+    discord: ProviderConfig<{ botToken: string; userId: string; channelId?: string }>;
+    telegram: ProviderConfig<{ botToken: string; chatId: string }>;
 };

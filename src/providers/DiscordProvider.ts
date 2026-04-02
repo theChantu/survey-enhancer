@@ -43,17 +43,25 @@ export class DiscordProvider extends BaseProvider<
 
     protected async send(message: string): Promise<boolean> {
         const channelId = await this.getChannelId();
-        const response = await fetch(
-            `https://discord.com/api/v10/channels/${channelId}/messages`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bot ${this.config.botToken}`,
+        // Discord messages have a max length of 2000 characters
+        const messageParts = this.splitMessage(message, 2000);
+
+        for (const part of messageParts) {
+            const response = await fetch(
+                `https://discord.com/api/v10/channels/${channelId}/messages`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bot ${this.config.botToken}`,
+                    },
+                    body: JSON.stringify({ content: part }),
                 },
-                body: JSON.stringify({ content: message }),
-            },
-        );
-        return response.ok;
+            );
+            if (!response.ok) {
+                return false;
+            }
+        }
+        return true;
     }
 }

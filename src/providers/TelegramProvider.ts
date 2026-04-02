@@ -13,5 +13,7 @@ export class TelegramProvider extends BaseProvider<
         super(config);
     }
 
-    async sendMessage(message: string): Promise<void> {}
+    protected send(message: string): Promise<boolean> {
+        return Promise.resolve(true);
+    }
 }

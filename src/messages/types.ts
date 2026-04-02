@@ -1,5 +1,6 @@
 import type { Settings, SettingsUpdate } from "@/store/createStore";
 import type { SiteName } from "@/adapters/sites";
+import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 
 type StoreUpdateMessage = SettingsUpdate & {
     siteName: SiteName;
@@ -16,12 +17,7 @@ type StoreFetchMessage = {
 
 interface MessageMap {
     "store-fetch": StoreFetchMessage;
-    "survey-notification": {
-        title: string;
-        message: string;
-        iconUrl?: string;
-        surveyLink: string;
-    };
+    "survey-notification": NotificationData[];
     "store-update": StoreUpdateMessage;
     "store-set": StoreSetMessage;
     "store-changed": SettingsUpdate;

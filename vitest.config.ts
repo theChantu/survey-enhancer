@@ -1,7 +1,8 @@
 import { defineConfig } from "vitest/config";
+import { loadEnv } from "vite";
 import path from "path";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "src"),
@@ -10,5 +11,6 @@ export default defineConfig({
     },
     test: {
         include: ["src/**/*.test.ts"],
+        env: loadEnv(mode, process.cwd(), ""),
     },
-});
+}));

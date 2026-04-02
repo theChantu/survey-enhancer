@@ -1,4 +1,4 @@
-import { ProviderConfigMap } from "@/notifications/providers";
+import { ProviderConfigMap } from "@/providers/providers";
 
 type Enhancement = {
     apply(): void;

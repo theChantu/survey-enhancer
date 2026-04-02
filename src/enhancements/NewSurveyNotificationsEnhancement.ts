@@ -5,6 +5,13 @@ import BaseEnhancement from "./BaseEnhancement";
 import getSiteResources from "../lib/getSiteResources";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 
+export interface NotificationData {
+    title: string;
+    message: string;
+    iconUrl?: string;
+    surveyLink: string;
+}
+
 class NewSurveyNotificationsEnhancement extends BaseEnhancement {
     async apply() {
         const surveys = this.adapter.getSurveyElements();
@@ -45,6 +52,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const includedResearchersSet = new Set(includedResearchers);
         const excludedResearchersSet = new Set(excludedResearchers);
 
+        const notifications: NotificationData[] = [];
         for (const survey of newSurveys) {
             const surveyId = this.adapter.getSurveyId(survey);
             const rawName = this.adapter.getSurveyResearcher(survey);
@@ -60,11 +68,14 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             )
                 continue;
 
-            await sendExtensionMessage({
-                type: "survey-notification",
-                data: this.buildNotification(survey, surveyId, assets),
-            });
+            notifications.push(
+                this.buildNotification(survey, surveyId, assets),
+            );
         }
+        await sendExtensionMessage({
+            type: "survey-notification",
+            data: notifications,
+        });
     }
 
     private async saveResearcherNames(

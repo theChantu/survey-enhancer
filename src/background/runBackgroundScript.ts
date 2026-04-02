@@ -39,7 +39,7 @@ function runBackgroundScript() {
     });
 
     onExtensionMessage("survey-notification", async (payload) => {
-        const { iconUrl, title, message, surveyLink } = payload;
+        const notifications = payload;
 
         // TODO: Query for custom idle time from the extension's settings
         // TODO: Route to Discord if queryState is idle
@@ -47,18 +47,21 @@ function runBackgroundScript() {
         if (state === "idle" || state === "locked") {
             // TODO: Send notification to providers
         } else {
-            const notificationId = await browser.notifications.create({
-                type: "basic",
-                iconUrl: iconUrl ?? "",
-                title,
-                message,
-            });
-            notificationActions.set(notificationId, async () => {
-                await browser.tabs.create({
-                    active: true,
-                    url: surveyLink,
+            for (const notification of notifications) {
+                const { title, message, surveyLink, iconUrl } = notification;
+                const notificationId = await browser.notifications.create({
+                    type: "basic",
+                    iconUrl: iconUrl ?? "",
+                    title,
+                    message,
                 });
-            });
+                notificationActions.set(notificationId, async () => {
+                    await browser.tabs.create({
+                        active: true,
+                        url: surveyLink,
+                    });
+                });
+            }
         }
     });
 
