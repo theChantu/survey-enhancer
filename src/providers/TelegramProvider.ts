@@ -1,4 +1,5 @@
 import { BaseProvider, type MessageData } from "./BaseProvider";
+import { TELEGRAM_API_BASE_URL } from "./providerHosts";
 
 import type { ProviderConfigMap } from "./providers";
 
@@ -23,7 +24,7 @@ export class TelegramProvider extends BaseProvider<
 
     private async fetchChatId() {
         const response = await fetch(
-            `https://api.telegram.org/bot${this.config.botToken}/getUpdates`,
+            `${TELEGRAM_API_BASE_URL}/bot${this.config.botToken}/getUpdates`,
         );
         return (await response.json()) as TelegramChannelResponse;
     }
@@ -37,7 +38,7 @@ export class TelegramProvider extends BaseProvider<
         return this.config.chatId;
     }
 
-    override onRetry(): void {
+    protected override onRetry(): void {
         this.config.chatId = undefined;
     }
 
@@ -46,29 +47,34 @@ export class TelegramProvider extends BaseProvider<
     }
 
     protected async send(message: string): Promise<boolean> {
-        const chatId = await this.getChatId();
-        // Telegram messages have a max length of 4096 characters
-        const messageParts = this.splitMessage(message, 4096);
+        try {
+            const chatId = await this.getChatId();
+            // Telegram messages have a max length of 4096 characters
+            const messageParts = this.splitMessage(message, 4096);
 
-        for (const part of messageParts) {
-            const response = await fetch(
-                `https://api.telegram.org/bot${this.config.botToken}/sendMessage`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
+            for (const part of messageParts) {
+                const response = await fetch(
+                    `${TELEGRAM_API_BASE_URL}/bot${this.config.botToken}/sendMessage`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            chat_id: chatId,
+                            text: part,
+                            parse_mode: "HTML",
+                        }),
                     },
-                    body: JSON.stringify({
-                        chat_id: chatId,
-                        text: part,
-                        parse_mode: "HTML",
-                    }),
-                },
-            );
-            if (!response.ok) {
-                return false;
+                );
+                if (!response.ok) {
+                    return false;
+                }
             }
+
+            return true;
+        } catch {
+            return false;
         }
-        return true;
     }
 }

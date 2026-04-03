@@ -191,11 +191,13 @@ export function createStore() {
         return result;
     }
 
-    async function set(values: GlobalSettingsUpdate): Promise<void>;
+    async function set(
+        values: GlobalSettingsUpdate,
+    ): Promise<GlobalSettingsUpdate>;
     async function set(
         siteName: SiteName,
         values: SettingsUpdate,
-    ): Promise<void>;
+    ): Promise<SettingsUpdate>;
     async function set(
         siteNameOrValues: SiteName | SettingsUpdate,
         maybeValues?: SettingsUpdate,
@@ -244,20 +246,36 @@ export function createStore() {
             Object.fromEntries(globalEntries) as GlobalSettingsUpdate,
             Object.fromEntries(siteEntries) as SiteSettingsUpdate,
         );
+
+        if (siteName === null) {
+            const changedGlobalKeys = globalEntries.map(
+                ([k]) => k as keyof GlobalSettings,
+            );
+            if (changedGlobalKeys.length === 0) {
+                return {} as GlobalSettingsUpdate;
+            }
+            return (await get(changedGlobalKeys)) as GlobalSettingsUpdate;
+        }
+
+        const changedKeys = Object.keys(filtered) as (keyof Settings)[];
+        if (changedKeys.length === 0) {
+            return {} as SettingsUpdate;
+        }
+        return (await get(siteName, changedKeys)) as SettingsUpdate;
     }
 
-    async function update(
-        siteName: SiteName,
-        values: DeepPartial<SiteSettings>,
-    ) {
-        const keys = Object.keys(values) as (keyof SiteSettings)[];
+    async function update(siteName: SiteName, values: DeepPartial<Settings>) {
+        const keys = Object.keys(values) as (keyof Settings)[];
+        if (keys.length === 0) {
+            return {} as SettingsUpdate;
+        }
         const current = await get(siteName, keys);
 
         const merged = Object.fromEntries(
             keys.map((k) => [k, deepMerge(current[k], values[k])]),
-        ) as SiteSettingsUpdate;
+        ) as SettingsUpdate;
 
-        await set(siteName, merged);
+        return await set(siteName, merged);
     }
 
     async function push<K extends ArrayKeys>(

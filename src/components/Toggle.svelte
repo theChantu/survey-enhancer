@@ -5,84 +5,20 @@
     export let onClick: () => void;
 </script>
 
-<label class="setting">
-    <div class="setting-text">
-        <div class="label">{title}</div>
-        <div class="description">{description}</div>
+<label class="flex items-center justify-between gap-4 py-2 cursor-pointer border-t border-white/4">
+    <div class="min-w-0">
+        <div class="text-[0.84rem] font-medium text-gray-300 leading-tight">{title}</div>
+        <div class="mt-0.5 text-[0.72rem] leading-snug text-gray-500">{description}</div>
     </div>
     <button
-        class="toggle"
-        class:active={value}
+        class="relative w-9 h-5 rounded-full border-none shrink-0 transition-colors duration-150 p-0 cursor-pointer {value ? 'bg-indigo-500' : 'bg-white/10'}"
         on:click={onClick}
         role="switch"
         aria-checked={value}
         aria-label={title}
     >
-        <span class="toggle-knob"></span>
+        <span
+            class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-150 {value ? 'translate-x-4' : ''}"
+        ></span>
     </button>
 </label>
-
-<style>
-    .setting {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 8px 0;
-        cursor: pointer;
-    }
-
-    .setting {
-        border-top: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .setting-text {
-        min-width: 0;
-    }
-
-    .label {
-        font-size: 0.84rem;
-        font-weight: 500;
-        color: #d1d5db;
-        line-height: 1.3;
-    }
-
-    .description {
-        margin-top: 2px;
-        font-size: 0.72rem;
-        line-height: 1.4;
-        color: #6b7280;
-    }
-
-    .toggle {
-        position: relative;
-        width: 36px;
-        height: 20px;
-        border-radius: 10px;
-        border: none;
-        background: rgba(255, 255, 255, 0.1);
-        cursor: pointer;
-        flex-shrink: 0;
-        transition: background 0.15s ease;
-        padding: 0;
-    }
-
-    .toggle.active {
-        background: #6366f1;
-    }
-
-    .toggle-knob {
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: #fff;
-        transition: transform 0.15s ease;
-    }
-
-    .toggle.active .toggle-knob {
-        transform: translateX(16px);
-    }
-</style>

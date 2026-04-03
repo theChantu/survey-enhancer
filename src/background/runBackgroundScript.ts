@@ -2,8 +2,9 @@ import { browser } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
 import { createStore } from "@/store/createStore";
-import { supportedSites } from "@/adapters/sites";
+import { supportedSites } from "@/adapters/siteConfigs";
 import { getProvider, type ProviderName } from "@/providers/providers";
+import { capitalize } from "@/lib/utils";
 
 function runBackgroundScript() {
     const filteredUrls = supportedSites.map((site) => `https://${site}/*`);
@@ -53,21 +54,25 @@ function runBackgroundScript() {
         );
 
         if (
-            state === "idle" ||
-            (state === "locked" && enabledProviders.length > 0)
+            enabledProviders.length > 0 &&
+            (state === "idle" || state === "locked")
         ) {
             for (const [name, config] of enabledProviders) {
-                const provider = getProvider(name as ProviderName, config);
-                const combined = notifications
-                    .map((notification) => {
-                        const { title, message, surveyLink } = notification;
-                        return `${title}\n${message}\n${surveyLink}`;
-                    })
-                    .join("\n\n");
-                await provider.sendMessage({
-                    title: `${siteName} - ${notifications.length} New Survey${notifications.length > 1 ? "s" : ""}`,
-                    body: combined,
-                });
+                try {
+                    const provider = getProvider(name as ProviderName, config);
+                    const combined = notifications
+                        .map((notification) => {
+                            const { title, message, surveyLink } = notification;
+                            return `${title}\n${message}\n${surveyLink}`;
+                        })
+                        .join("\n\n");
+                    await provider.sendMessage({
+                        title: `${capitalize(siteName)} - ${notifications.length} New Survey${notifications.length > 1 ? "s" : ""}`,
+                        body: combined,
+                    });
+                } catch (error) {
+                    console.error("Error sending notification:", error);
+                }
             }
         } else {
             for (const notification of notifications) {
@@ -137,12 +142,14 @@ function runBackgroundScript() {
 
     onExtensionMessage("store-update", async (payload) => {
         const { siteName, ...settings } = payload;
-        await store.update(siteName, settings);
+        const data = await store.update(siteName, settings);
+        return { siteName, data };
     });
 
     onExtensionMessage("store-set", async (payload) => {
         const { siteName, ...settings } = payload;
-        await store.set(siteName, settings);
+        const data = await store.set(siteName, settings);
+        return { siteName, data };
     });
 
     onExtensionMessage("track-survey-completion", async (payload) => {

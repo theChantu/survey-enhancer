@@ -1,10 +1,15 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { defaultSettings } from "@/store/defaultSettings";
-    import { sites, type SupportedSites } from "@/adapters/sites";
+    import { sites, type SupportedSites } from "@/adapters/siteConfigs";
     import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
     import Toggle from "@/components/Toggle.svelte";
-    import ResearcherList from "@/components/ResearcherList.svelte";
+    import Section from "@/components/Section.svelte";
+    import Field from "@/components/Field.svelte";
+    import Subsection from "@/components/Subsection.svelte";
+    import TagInput from "@/components/TagInput.svelte";
+    import ToastHost from "@/components/ToastHost.svelte";
+    import { showActionToast } from "@/entrypoints/popup/toastStore";
     import {
         Settings as SettingsIcon,
         CircleDollarSign,
@@ -13,38 +18,80 @@
         Bug,
         LoaderCircle,
         RefreshCw,
+        Send,
     } from "@lucide/svelte";
-    import { capitalize } from "@/lib/utils";
+    import { capitalize, cleanResearcherName } from "@/lib/utils";
     import { currencyKeys } from "@/store/types";
 
     import type { Settings, SettingsUpdate } from "@/store/createStore";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
+    import type { ProviderConfigMap } from "@/providers/providers";
 
     const siteKeys = Object.keys(sites) as SupportedSites[];
+    const providerSetupUrl =
+        "https://github.com/theChantu/survey-enhancer#provider-setup";
 
     let selectedSite: SupportedSites = siteKeys[0];
     let loadedSites = {} as Partial<Record<SupportedSites, Settings>>;
 
     $: currentSite = loadedSites[selectedSite];
 
-    function updateSetting(values: SettingsUpdate) {
-        const current = loadedSites[selectedSite];
-        if (!current) return;
-        loadedSites[selectedSite] = { ...current, ...values };
-        sendExtensionMessage({
-            type: "store-update",
-            data: { siteName: sites[selectedSite].name, ...values },
+    let settingsMutationQueue = Promise.resolve();
+
+    function updateProvider<K extends keyof ProviderConfigMap>(
+        name: K,
+        values: Partial<ProviderConfigMap[K]>,
+    ) {
+        updateSetting({
+            providers: { [name]: values },
         });
     }
 
-    function setSetting(values: SettingsUpdate) {
-        const current = loadedSites[selectedSite];
-        if (!current) return;
-        loadedSites[selectedSite] = { ...current, ...values };
-        sendExtensionMessage({
-            type: "store-set",
-            data: { siteName: sites[selectedSite].name, ...values },
-        });
+    async function applySettingsMutation(
+        type: "store-update" | "store-set",
+        siteUrl: SupportedSites,
+        values: SettingsUpdate,
+    ) {
+        if (!loadedSites[siteUrl]) return;
+
+        try {
+            const response = await sendExtensionMessage({
+                type,
+                data: { siteName: sites[siteUrl].name, ...values },
+            });
+            const current = loadedSites[siteUrl];
+            if (!current) return;
+            loadedSites[siteUrl] = { ...current, ...response.data };
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function queueSettingsMutation(
+        type: "store-update" | "store-set",
+        values: SettingsUpdate,
+        siteUrl: SupportedSites = selectedSite,
+    ) {
+        settingsMutationQueue = settingsMutationQueue
+            .catch((error) => {
+                console.error(error);
+            })
+            .then(() => applySettingsMutation(type, siteUrl, values));
+        return settingsMutationQueue;
+    }
+
+    function updateSetting(
+        values: SettingsUpdate,
+        siteUrl: SupportedSites = selectedSite,
+    ) {
+        void queueSettingsMutation("store-update", values, siteUrl);
+    }
+
+    function setSetting(
+        values: SettingsUpdate,
+        siteUrl: SupportedSites = selectedSite,
+    ) {
+        return queueSettingsMutation("store-set", values, siteUrl);
     }
 
     type ResearcherKey = Exclude<
@@ -69,8 +116,20 @@
     type ResettableKey = Exclude<keyof typeof defaultSettings, "enableDebug">;
 
     function resetKey(key: ResettableKey) {
-        if (!currentSite) return;
-        setSetting({ [key]: defaultSettings[key] });
+        const siteUrl = selectedSite;
+        const siteSettings = loadedSites[siteUrl];
+        if (!siteSettings) return;
+
+        const previousValue = structuredClone(siteSettings[key]);
+        const resetValue = structuredClone(defaultSettings[key]);
+
+        void setSetting({ [key]: resetValue }, siteUrl);
+
+        showActionToast({
+            message: `Reset ${formatKey(key)}.`,
+            actionLabel: "Undo",
+            onAction: () => setSetting({ [key]: previousValue }, siteUrl),
+        });
     }
 
     // Exclude enableDebug because there's already a dedicated toggle for it
@@ -80,6 +139,12 @@
 
     function formatKey(key: string) {
         return key.replace(/([A-Z])/g, " $1").toLowerCase();
+    }
+
+    function parsePositiveInt(raw: string): number | null {
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value < 1) return null;
+        return Math.round(value);
     }
 
     async function loadSite(siteUrl: SupportedSites) {
@@ -121,13 +186,13 @@
     $: siteModules = new Set(sites[selectedSite].modules);
 </script>
 
-<div class="popup">
-    <div class="header">
-        <div class="site-select-wrap">
+<div class="p-4 flex flex-col gap-4">
+    <div>
+        <div class="relative text-gray-500">
             <select
-                class="site-select"
+                class="w-full py-2 pl-2.5 pr-8 rounded-md border border-white/8 bg-white/4 hover:bg-white/4 text-gray-100 text-[0.9rem] font-semibold font-[inherit] outline-none appearance-none cursor-pointer focus:border-white/20 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
                 value={selectedSite}
-                on:change={(e: { currentTarget: HTMLSelectElement }) => {
+                on:change={(e) => {
                     selectedSite = e.currentTarget.value as SupportedSites;
                     loadSite(selectedSite);
                 }}
@@ -138,23 +203,24 @@
                     </option>
                 {/each}
             </select>
-            <ChevronDown size={14} />
+            <div
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            >
+                <ChevronDown size={14} />
+            </div>
         </div>
     </div>
 
     {#if !currentSite}
-        <div class="card loading-card">
-            <LoaderCircle size={18} class="spinner-icon" />
+        <div
+            class="border-t border-white/6 pt-3 p-8 flex items-center justify-center gap-2 text-gray-500 text-[0.82rem]"
+        >
+            <LoaderCircle size={18} class="animate-spin" />
             <span>Loading settings...</span>
         </div>
     {:else}
         {#if siteModules.has("SurveyLinks") || siteModules.has("HighlightRates")}
-            <div class="card section">
-                <h2>
-                    <SettingsIcon size={14} strokeWidth={2.5} />
-                    General
-                </h2>
-
+            <Section title="General" icon={SettingsIcon}>
                 {#if siteModules.has("SurveyLinks")}
                     <Toggle
                         title="Survey links"
@@ -180,15 +246,11 @@
                             })}
                     />
                 {/if}
-            </div>
+            </Section>
         {/if}
 
         {#if siteModules.has("CurrencyConversion")}
-            <div class="card section">
-                <h2>
-                    <CircleDollarSign size={14} strokeWidth={2.5} />
-                    Currency
-                </h2>
+            <Section title="Currency" icon={CircleDollarSign}>
                 <Toggle
                     title="Currency conversion"
                     description="Convert rewards into your selected currency."
@@ -199,11 +261,11 @@
                                 !currentSite?.enableCurrencyConversion,
                         })}
                 />
-                <div class="field">
-                    <label for="currency">Selected currency</label>
-                    <div class="select-wrap">
+                <Field label="Selected currency" id="currency">
+                    <div class="relative text-gray-500">
                         <select
                             id="currency"
+                            class="w-full py-2 pl-2.5 pr-8 rounded-md border border-white/8 bg-white/4 hover:bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none appearance-none cursor-pointer focus:border-white/20 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
                             bind:value={currentSite.selectedCurrency}
                             on:change={(e) =>
                                 updateSetting({
@@ -215,18 +277,18 @@
                                 <option value={currency}>{currency}</option>
                             {/each}
                         </select>
-                        <ChevronDown size={14} />
+                        <div
+                            class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        >
+                            <ChevronDown size={14} />
+                        </div>
                     </div>
-                </div>
-            </div>
+                </Field>
+            </Section>
         {/if}
 
         {#if siteModules.has("NewSurveyNotifications")}
-            <div class="card section">
-                <h2>
-                    <Bell size={14} strokeWidth={2.5} />
-                    Notifications
-                </h2>
+            <Section title="Notifications" icon={Bell}>
                 <Toggle
                     title="New survey notifications"
                     description="Send a desktop notification when a new survey appears."
@@ -238,37 +300,98 @@
                         })}
                 />
                 {#if currentSite?.enableNewSurveyNotifications}
-                    <ResearcherList
+                    <TagInput
                         title="Included researchers"
-                        names={currentSite?.includedResearchers}
+                        values={currentSite?.includedResearchers}
                         suggestions={Object.keys(
                             currentSite?.cachedResearchers,
                         )}
+                        placeholder="Add researcher..."
+                        clean={cleanResearcherName}
                         onAdd={(name) =>
                             addResearcher("includedResearchers", name)}
                         onRemove={(name) =>
                             removeResearcher("includedResearchers", name)}
                     />
-                    <ResearcherList
+                    <TagInput
                         title="Excluded researchers"
-                        names={currentSite?.excludedResearchers}
+                        values={currentSite?.excludedResearchers}
                         suggestions={Object.keys(
                             currentSite?.cachedResearchers,
                         )}
+                        placeholder="Add researcher..."
+                        clean={cleanResearcherName}
                         onAdd={(name) =>
                             addResearcher("excludedResearchers", name)}
                         onRemove={(name) =>
                             removeResearcher("excludedResearchers", name)}
                     />
                 {/if}
-            </div>
+            </Section>
         {/if}
 
-        <div class="card section">
-            <h2>
-                <RefreshCw size={14} strokeWidth={2.5} />
-                Auto Reload
-            </h2>
+        <Section title="Providers" icon={Send}>
+            <div class="mb-2 text-[0.74rem] text-gray-500">
+                Need help with bot setup?
+                <a
+                    href={providerSetupUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="ml-1 text-indigo-300 hover:text-indigo-200"
+                    >View setup guide</a
+                >
+            </div>
+
+            <Field label="Idle threshold (minutes)" id="idle-threshold">
+                <input
+                    id="idle-threshold"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
+                    value={Math.max(
+                        1,
+                        Math.round(currentSite.idleThreshold / 60),
+                    )}
+                    on:change={(e) => {
+                        const minutes = parsePositiveInt(e.currentTarget.value);
+                        if (minutes === null) return;
+                        updateSetting({
+                            idleThreshold: minutes * 60,
+                        });
+                    }}
+                />
+            </Field>
+
+            <Subsection withDivider={false}>
+                <Toggle
+                    title="Telegram"
+                    description="Send notifications via Telegram bot when idle."
+                    value={currentSite.providers.telegram?.enabled ?? false}
+                    onClick={() =>
+                        updateProvider("telegram", {
+                            enabled: !currentSite.providers.telegram?.enabled,
+                        })}
+                />
+                {#if currentSite.providers.telegram?.enabled}
+                    <Field label="Bot token" id="telegram-bot-token">
+                        <input
+                            id="telegram-bot-token"
+                            type="password"
+                            class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
+                            value={currentSite.providers.telegram?.botToken ??
+                                ""}
+                            on:change={(e) =>
+                                updateProvider("telegram", {
+                                    botToken: e.currentTarget.value,
+                                })}
+                        />
+                    </Field>
+                {/if}
+            </Subsection>
+        </Section>
+
+        <Section title="Auto Reload" icon={RefreshCw}>
             <Toggle
                 title="Auto reload"
                 description="Periodically refresh the page in the background to check for new studies."
@@ -279,44 +402,48 @@
                     })}
             />
             {#if currentSite?.enableAutoReload}
-                <div class="field">
-                    <label for="min-interval">Min interval (minutes)</label>
+                <Field label="Min interval (minutes)" id="min-interval">
                     <input
                         id="min-interval"
                         type="number"
                         min="1"
+                        step="1"
+                        class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
                         value={currentSite?.minReloadInterval}
-                        on:change={(e) =>
+                        on:change={(e) => {
+                            const minutes = parsePositiveInt(
+                                e.currentTarget.value,
+                            );
+                            if (minutes === null) return;
                             updateSetting({
-                                minReloadInterval: Number(
-                                    e.currentTarget.value,
-                                ),
-                            })}
+                                minReloadInterval: minutes,
+                            });
+                        }}
                     />
-                </div>
-                <div class="field">
-                    <label for="max-interval">Max interval (minutes)</label>
+                </Field>
+                <Field label="Max interval (minutes)" id="max-interval">
                     <input
                         id="max-interval"
                         type="number"
                         min="1"
+                        step="1"
+                        class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
                         value={currentSite?.maxReloadInterval}
-                        on:change={(e) =>
+                        on:change={(e) => {
+                            const minutes = parsePositiveInt(
+                                e.currentTarget.value,
+                            );
+                            if (minutes === null) return;
                             updateSetting({
-                                maxReloadInterval: Number(
-                                    e.currentTarget.value,
-                                ),
-                            })}
+                                maxReloadInterval: minutes,
+                            });
+                        }}
                     />
-                </div>
+                </Field>
             {/if}
-        </div>
+        </Section>
 
-        <div class="card section">
-            <h2>
-                <Bug size={14} strokeWidth={2.5} />
-                Developer
-            </h2>
+        <Section title="Developer" icon={Bug}>
             <Toggle
                 title="Debug mode"
                 description="Log extension activity to the browser console."
@@ -328,221 +455,27 @@
             />
 
             {#if currentSite?.enableDebug}
-                <div class="debug-resets">
-                    <span class="list-label">Reset to default</span>
-                    <div class="debug-buttons">
+                <Subsection
+                    className="flex flex-col gap-2"
+                    borderClass="border-white/4"
+                >
+                    <span class="text-[0.78rem] font-medium text-gray-500"
+                        >Reset to default</span
+                    >
+                    <div class="flex flex-wrap gap-1">
                         {#each resettableKeys as key}
                             <button
-                                class="debug-btn"
+                                class="py-1 px-2 rounded border border-white/8 bg-white/4 text-gray-300 text-[0.72rem] font-[inherit] cursor-pointer hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300"
                                 on:click={() => resetKey(key)}
                             >
                                 {formatKey(key)}
                             </button>
                         {/each}
                     </div>
-                </div>
+                </Subsection>
             {/if}
-        </div>
+        </Section>
     {/if}
+
+    <ToastHost />
 </div>
-
-<style>
-    :global(body) {
-        margin: 0;
-        min-width: 340px;
-        background: #121417;
-        color: #d1d5db;
-        font-family:
-            system-ui,
-            -apple-system,
-            sans-serif;
-        -webkit-font-smoothing: antialiased;
-    }
-
-    .popup {
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .site-select-wrap {
-        position: relative;
-        color: #6b7280;
-    }
-
-    .site-select-wrap :global(svg) {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-    }
-
-    .site-select {
-        width: 100%;
-        padding: 8px 32px 8px 10px;
-        border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
-        color: #f3f4f6;
-        font-size: 0.9rem;
-        font-weight: 600;
-        font-family: inherit;
-        outline: none;
-        appearance: none;
-        cursor: pointer;
-    }
-
-    .site-select:focus {
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .site-select option {
-        background: #1a1d21;
-        color: #d1d5db;
-    }
-
-    .card {
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-        padding-top: 12px;
-    }
-
-    .section h2 {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin: 0 0 8px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-
-    .field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .field label {
-        font-size: 0.78rem;
-        font-weight: 500;
-        color: #6b7280;
-    }
-
-    .select-wrap {
-        position: relative;
-        color: #6b7280;
-    }
-
-    .select-wrap :global(svg) {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-    }
-
-    .select-wrap select {
-        width: 100%;
-        padding: 8px 32px 8px 10px;
-        border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
-        color: #d1d5db;
-        font-size: 0.82rem;
-        font-family: inherit;
-        outline: none;
-        appearance: none;
-        cursor: pointer;
-    }
-
-    .select-wrap select option {
-        background: #1a1d21;
-        color: #d1d5db;
-    }
-
-    .select-wrap select:focus {
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    input[type="number"] {
-        width: 100%;
-        padding: 8px 10px;
-        border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
-        color: #d1d5db;
-        font-size: 0.82rem;
-        font-family: inherit;
-        outline: none;
-        box-sizing: border-box;
-    }
-
-    input[type="number"]:focus {
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .loading-card {
-        padding: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        color: #6b7280;
-        font-size: 0.82rem;
-    }
-
-    .loading-card :global(.spinner-icon) {
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .debug-resets {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .debug-resets .list-label {
-        font-size: 0.78rem;
-        font-weight: 500;
-        color: #6b7280;
-    }
-
-    .debug-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-
-    .debug-btn {
-        padding: 4px 8px;
-        border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
-        color: #d1d5db;
-        font-size: 0.72rem;
-        font-family: inherit;
-        cursor: pointer;
-    }
-
-    .debug-btn:hover {
-        background: rgba(239, 68, 68, 0.15);
-        border-color: rgba(239, 68, 68, 0.3);
-        color: #fca5a5;
-    }
-</style>

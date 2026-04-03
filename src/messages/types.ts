@@ -1,5 +1,5 @@
 import type { Settings, SettingsUpdate } from "@/store/createStore";
-import type { SiteName } from "@/adapters/sites";
+import type { SiteName } from "@/adapters/siteConfigs";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 
 type StoreUpdateMessage = SettingsUpdate & {
@@ -8,6 +8,11 @@ type StoreUpdateMessage = SettingsUpdate & {
 
 type StoreSetMessage = SettingsUpdate & {
     siteName: SiteName;
+};
+
+type StoreMutationResponse = {
+    siteName: SiteName;
+    data: SettingsUpdate;
 };
 
 type StoreFetchMessage = {
@@ -34,8 +39,8 @@ interface MessageMap {
 interface ResponseMap {
     "store-fetch": { siteName: SiteName; data: Settings } | null;
     "survey-notification": void;
-    "store-update": void;
-    "store-set": void;
+    "store-update": StoreMutationResponse;
+    "store-set": StoreMutationResponse;
     "store-changed": void;
     fetch: unknown;
     "network-event": void;

@@ -177,6 +177,13 @@ describe("set", () => {
         expect(siteData.selectedCurrency).toBe("GBP");
         expect(siteData.enableDebug).toBeUndefined();
     });
+
+    it("returns persisted values for changed keys", async () => {
+        const store = createStore();
+        const result = await store.set(siteName, { selectedCurrency: "GBP" });
+
+        expect(result.selectedCurrency).toBe("GBP");
+    });
 });
 
 describe("update", () => {
@@ -211,6 +218,26 @@ describe("update", () => {
 
         const result = await store.get(siteName, ["selectedCurrency"]);
         expect(result.selectedCurrency).toBe("GBP");
+    });
+
+    it("returns deeply merged updated values", async () => {
+        const store = createStore();
+        await store.update(siteName, {
+            conversionRates: {
+                USD: { timestamp: 100, rates: { GBP: 0.8, USD: 1 } },
+                GBP: { timestamp: 100, rates: { USD: 1.2, GBP: 1 } },
+            },
+        });
+
+        const result = await store.update(siteName, {
+            conversionRates: {
+                USD: { timestamp: 200, rates: { GBP: 0.2, USD: 1.4 } },
+            },
+        });
+
+        expect(result.conversionRates).toBeDefined();
+        expect(result.conversionRates?.USD.timestamp).toBe(200);
+        expect(result.conversionRates?.GBP.timestamp).toBe(100);
     });
 });
 

@@ -7,7 +7,7 @@ import {
 } from "../enhancements";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import getSiteAdapter from "./getSiteAdapter";
-import { moduleToEnableKey } from "@/adapters/sites";
+import { moduleToEnableKey } from "@/adapters/siteConfigs";
 
 import type { ModuleName } from "../adapters/modules/BaseModule";
 import type Enhancement from "../enhancements/BaseEnhancement";

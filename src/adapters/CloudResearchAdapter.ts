@@ -1,5 +1,5 @@
 import { BaseAdapter } from "./BaseAdapter";
-import { sites } from "./sites";
+import { sites } from "./siteConfigs";
 
 const HOST = "connect.cloudresearch.com";
 

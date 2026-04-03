@@ -42,6 +42,25 @@ A browser extension that enhances the survey experience on [Prolific](https://ap
 3. Toggle features and adjust settings per site.
 4. The popup auto-detects which site you're on.
 
+## Provider Setup
+
+The extension supports Telegram notifications when your device is idle/locked and the provider is enabled.
+
+### Telegram setup
+
+1. Open Telegram and start a chat with [@BotFather](https://t.me/BotFather).
+2. Create a bot using `/newbot` and copy the bot token.
+3. Send at least one message to your bot from your Telegram account.
+4. Paste the token into **Providers -> Telegram -> Bot token**.
+
+### Troubleshooting
+
+- Ensure the extension has been reloaded after permission changes.
+- Confirm your token is correct.
+- For Telegram, make sure you sent a message to the bot before testing.
+
+Provider credentials are stored in extension storage on your local browser profile.
+
 ## Development
 
 ### Prerequisites

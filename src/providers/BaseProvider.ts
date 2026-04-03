@@ -57,13 +57,11 @@ export abstract class BaseProvider<T = unknown> {
         timeout = 5000,
     ): Promise<void> {
         const ok = await this.send(this.formatMessage(data));
+        if (ok || attempts >= 3) return;
 
-        if (!ok && attempts < 3) {
-            this.onRetry();
-            setTimeout(
-                () => this.sendMessage(data, attempts + 1, timeout + 5000),
-                timeout,
-            );
-        }
+        this.onRetry();
+        setTimeout(() => {
+            void this.sendMessage(data, attempts + 1, timeout + 5000);
+        }, timeout);
     }
 }

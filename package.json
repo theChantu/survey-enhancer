@@ -26,6 +26,8 @@
     },
     "dependencies": {
         "@lucide/svelte": "^0.577.0",
+        "@tailwindcss/vite": "^4.2.2",
+        "tailwindcss": "^4.2.2",
         "tldts": "^7.0.26",
         "ufo": "^1.6.3"
     }

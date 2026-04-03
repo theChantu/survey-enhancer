@@ -1,7 +1,7 @@
 import { ProlificAdapter } from "@/adapters/ProlificAdapter";
 import { CloudResearchAdapter } from "@/adapters/CloudResearchAdapter";
 import { BaseAdapter } from "@/adapters/BaseAdapter";
-import type { SupportedSites } from "@/adapters/sites";
+import type { SupportedSites } from "@/adapters/siteConfigs";
 
 const siteToAdapter = {
     "app.prolific.com": ProlificAdapter,

@@ -1,6 +1,6 @@
 import { BaseAdapter } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
-import { sites } from "./sites";
+import { sites } from "./siteConfigs";
 
 const HOST = "app.prolific.com";
 

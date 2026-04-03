@@ -3,7 +3,7 @@ import debounce from "@/lib/debounce";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
 import type { ModuleName } from "./modules/BaseModule";
-import type { SiteInfo, SupportedSites, sites } from "./sites";
+import type { SiteInfo, SupportedSites, sites } from "./siteConfigs";
 
 export type AdapterConfig<H extends SupportedSites = SupportedSites> =
     (typeof sites)[H] &
