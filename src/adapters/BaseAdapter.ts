@@ -145,6 +145,7 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         }
     }
 
+    // TODO: Replace current mutation observer implementation in content script with the adapter observeDom method
     observeDom() {
         this.observer = new MutationObserver((mutations) => {
             this.pendingMutations.push(...mutations);
@@ -156,7 +157,7 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     }
 
     observeNetwork() {
-        const unsubscribe = onExtensionMessage("network-event", (payload) => {
+        const unsubscribe = onExtensionMessage("network", (payload) => {
             this.handleNetworkEvent({
                 url: payload.url,
                 method: payload.method,

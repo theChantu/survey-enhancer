@@ -56,6 +56,18 @@ export function showActionToast(options: {
     return showToastInternal(options);
 }
 
+export function pauseToast(id: string) {
+    const existing = timers.get(id);
+    if (existing) {
+        clearTimeout(existing);
+        timers.delete(id);
+    }
+}
+
+export function resumeToast(id: string, durationMs = 4000) {
+    scheduleDismiss(id, durationMs);
+}
+
 export function dismissToast(id: string) {
     const existing = timers.get(id);
     if (existing) {

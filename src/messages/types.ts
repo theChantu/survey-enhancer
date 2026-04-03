@@ -20,31 +20,32 @@ type StoreFetchMessage = {
     settings: (keyof Settings)[];
 };
 
-type SurveyNotificationMessage = {
+type NotificationMessage = {
     siteName: SiteName;
     notifications: NotificationData[];
+    delivery?: "auto" | "provider" | "browser";
 };
 
 interface MessageMap {
     "store-fetch": StoreFetchMessage;
-    "survey-notification": SurveyNotificationMessage;
+    notification: NotificationMessage;
     "store-update": StoreUpdateMessage;
     "store-set": StoreSetMessage;
     "store-changed": SettingsUpdate;
     fetch: { url: string };
-    "network-event": { url: string; method: string; statusCode: number };
-    "track-survey-completion": { siteName: SiteName; url: string };
+    network: { url: string; method: string; statusCode: number };
+    "survey-completion": { siteName: SiteName; url: string };
 }
 
 interface ResponseMap {
     "store-fetch": { siteName: SiteName; data: Settings } | null;
-    "survey-notification": void;
+    notification: boolean;
     "store-update": StoreMutationResponse;
     "store-set": StoreMutationResponse;
     "store-changed": void;
     fetch: unknown;
-    "network-event": void;
-    "track-survey-completion": void;
+    network: void;
+    "survey-completion": void;
 }
 
 type MessageResponse<K extends keyof MessageMap> = K extends keyof ResponseMap

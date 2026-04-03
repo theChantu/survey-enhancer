@@ -73,7 +73,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             );
         }
         await sendExtensionMessage({
-            type: "survey-notification",
+            type: "notification",
             data: {
                 siteName: this.adapter.config.name,
                 notifications: notifications,

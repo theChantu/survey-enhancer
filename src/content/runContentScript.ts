@@ -123,7 +123,7 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     adapter.on("surveyCompletion", (data) => {
         sendExtensionMessage({
-            type: "track-survey-completion",
+            type: "survey-completion",
             data: { siteName: adapter.config.name, url: data.url },
         });
     });

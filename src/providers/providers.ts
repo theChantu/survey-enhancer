@@ -13,6 +13,10 @@ const providerNames = Object.keys(
 
 export type ProviderName = (typeof providerNames)[number];
 
+export function isProviderName(value: string): value is ProviderName {
+    return value in nameToProvider;
+}
+
 type ProviderConfig<T> = { enabled: boolean } & T;
 
 export type ProviderConfigMap = {
@@ -23,5 +27,9 @@ export function getProvider<K extends ProviderName>(
     name: K,
     config: ProviderConfigMap[K],
 ): BaseProvider<ProviderConfigMap[K]> {
-    return new (nameToProvider[name] as any)(config);
+    const Provider = nameToProvider[name];
+    if (!Provider) {
+        throw new Error(`Unsupported provider: ${name}`);
+    }
+    return new Provider(config);
 }

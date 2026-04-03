@@ -1,3 +1,4 @@
+import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { BaseProvider, type MessageData } from "./BaseProvider";
 import { TELEGRAM_API_BASE_URL } from "./providerHosts";
 

@@ -8,13 +8,14 @@ import { capitalize } from "@/lib/utils";
 
 function runBackgroundScript() {
     const filteredUrls = supportedSites.map((site) => `https://${site}/*`);
+    const defaultNotificationIconUrl = browser.runtime.getURL("/icon-48.png");
 
     browser.webRequest.onCompleted.addListener(
         (details) => {
             if (!details.tabId || details.tabId < 0) return;
 
             sendTabMessage(details.tabId, {
-                type: "network-event",
+                type: "network",
                 data: {
                     url: details.url,
                     method: details.method,
@@ -40,57 +41,127 @@ function runBackgroundScript() {
         notificationActions.delete(id);
     });
 
-    onExtensionMessage("survey-notification", async (payload) => {
-        const { siteName, notifications } = payload;
-
-        const { idleThreshold, providers } = await store.get([
-            "idleThreshold",
-            "providers",
-        ]);
-        const state = await browser.idle.queryState(idleThreshold);
-
+    async function sendProviderNotifications(
+        siteName: string,
+        notifications: {
+            title: string;
+            message: string;
+            surveyLink: string;
+        }[],
+        providers: Awaited<ReturnType<typeof store.get>>["providers"],
+    ): Promise<boolean> {
         const enabledProviders = Object.entries(providers).filter(
             ([, config]) => config.enabled,
         );
+        if (enabledProviders.length === 0) return false;
 
-        if (
-            enabledProviders.length > 0 &&
-            (state === "idle" || state === "locked")
-        ) {
-            for (const [name, config] of enabledProviders) {
-                try {
-                    const provider = getProvider(name as ProviderName, config);
-                    const combined = notifications
-                        .map((notification) => {
-                            const { title, message, surveyLink } = notification;
-                            return `${title}\n${message}\n${surveyLink}`;
-                        })
-                        .join("\n\n");
-                    await provider.sendMessage({
-                        title: `${capitalize(siteName)} - ${notifications.length} New Survey${notifications.length > 1 ? "s" : ""}`,
-                        body: combined,
-                    });
-                } catch (error) {
-                    console.error("Error sending notification:", error);
+        let hasSuccess = false;
+
+        for (const [name, config] of enabledProviders) {
+            try {
+                const provider = getProvider(name as ProviderName, config);
+                const combined = notifications
+                    .map((notification) => {
+                        const { title, message, surveyLink } = notification;
+                        return `${title}\n${message}\n${surveyLink}`;
+                    })
+                    .join("\n\n");
+
+                const ok = await provider.sendMessage({
+                    title: `${capitalize(siteName)} - ${notifications.length} New Survey${notifications.length > 1 ? "s" : ""}`,
+                    body: combined,
+                });
+
+                if (ok) {
+                    hasSuccess = true;
+                    await store.set({ providers: { [name]: provider.configData } });
+                } else {
+                    console.error(`Provider "${name}" failed to send.`);
                 }
+            } catch (error) {
+                console.error("Error sending notification:", error);
             }
-        } else {
-            for (const notification of notifications) {
+        }
+
+        return hasSuccess;
+    }
+
+    async function sendBrowserNotifications(
+        notifications: {
+            title: string;
+            message: string;
+            surveyLink: string;
+            iconUrl?: string;
+        }[],
+    ): Promise<boolean> {
+        let hasSuccess = false;
+
+        for (const notification of notifications) {
+            try {
                 const { title, message, surveyLink, iconUrl } = notification;
+                const resolvedIconUrl =
+                    iconUrl && iconUrl.length > 0
+                        ? iconUrl
+                        : defaultNotificationIconUrl;
                 const notificationId = await browser.notifications.create({
                     type: "basic",
-                    iconUrl: iconUrl ?? "",
+                    iconUrl: resolvedIconUrl,
                     title,
                     message,
                 });
+
+                hasSuccess = true;
                 notificationActions.set(notificationId, async () => {
                     await browser.tabs.create({
                         active: true,
                         url: surveyLink,
                     });
                 });
+            } catch (error) {
+                console.error("Error creating browser notification:", error);
             }
         }
+
+        return hasSuccess;
+    }
+
+    onExtensionMessage("notification", async (payload) => {
+        const { siteName, notifications, delivery } = payload;
+        const mode = delivery ?? "auto";
+
+        if (mode === "browser") {
+            return await sendBrowserNotifications(notifications);
+        }
+
+        const { providers } = await store.get(["providers"]);
+
+        if (mode === "provider") {
+            return await sendProviderNotifications(
+                siteName,
+                notifications,
+                providers,
+            );
+        }
+
+        const enabledProviders = Object.entries(providers).filter(
+            ([, config]) => config.enabled,
+        );
+        if (enabledProviders.length === 0) {
+            return await sendBrowserNotifications(notifications);
+        }
+
+        const { idleThreshold } = await store.get(["idleThreshold"]);
+        const state = await browser.idle.queryState(idleThreshold);
+
+        if (state === "idle" || state === "locked") {
+            return await sendProviderNotifications(
+                siteName,
+                notifications,
+                providers,
+            );
+        }
+
+        return await sendBrowserNotifications(notifications);
     });
 
     const store = createStore();
@@ -152,7 +223,7 @@ function runBackgroundScript() {
         return { siteName, data };
     });
 
-    onExtensionMessage("track-survey-completion", async (payload) => {
+    onExtensionMessage("survey-completion", async (payload) => {
         const { siteName, url } = payload;
         const { totalSurveyCompletions, dailySurveyCompletions } =
             await store.get(siteName, [
@@ -169,11 +240,6 @@ function runBackgroundScript() {
             },
         });
     });
-
-    // TODO: Fetch provider API keys from the extension's storage and use them to send notifications
-    // Send a notification to each provider when a new survey is detected, including the survey title, researcher, reward, and link
-    // Events will be emitted from the adapter observeDom and observeNetwork methods
-    // Replace current mutation observer implementation in content script with the adapter observeDom method
 }
 
 export { runBackgroundScript };
