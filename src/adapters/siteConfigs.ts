@@ -1,15 +1,5 @@
-import { Settings } from "@/store/types";
-import type { ModuleName } from "./modules/BaseModule";
+import type { EnhancementKey } from "@/enhancements/enhancementConfigs";
 import type { EventResponseMap } from "./BaseAdapter";
-
-type EnableKeys = Extract<keyof Settings, `enable${string}`>;
-
-export const moduleToEnableKey = {
-    CurrencyConversion: "enableCurrencyConversion",
-    HighlightRates: "enableHighlightRates",
-    NewSurveyNotifications: "enableNewSurveyNotifications",
-    SurveyLinks: "enableSurveyLinks",
-} as const satisfies Record<ModuleName, EnableKeys>;
 
 export interface SiteInfo {
     name: string;
@@ -17,7 +7,7 @@ export interface SiteInfo {
     iconPath: string;
     suffix?: string;
     query?: Record<string, string | number | boolean>;
-    modules: ModuleName[];
+    modules: EnhancementKey[];
     networkPatterns: Partial<Record<keyof EventResponseMap, string>>;
 }
 
@@ -27,10 +17,10 @@ export const sites = {
         surveyPath: "/studies",
         iconPath: "/apple-touch-icon.png",
         modules: [
-            "CurrencyConversion",
-            "HighlightRates",
-            "NewSurveyNotifications",
-            "SurveyLinks",
+            "currencyConversion",
+            "highlightRates",
+            "newSurveyNotifications",
+            "surveyLinks",
         ],
         networkPatterns: {
             surveyCompletion: "/complete",
@@ -46,9 +36,9 @@ export const sites = {
             size: 100,
         },
         modules: [
-            "CurrencyConversion",
-            "HighlightRates",
-            "NewSurveyNotifications",
+            "currencyConversion",
+            "highlightRates",
+            "newSurveyNotifications",
         ],
         networkPatterns: {
             surveyCompletion: "/submitRedirect",

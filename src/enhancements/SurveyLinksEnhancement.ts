@@ -1,10 +1,6 @@
 import BaseEnhancement from "./BaseEnhancement";
 
 class SurveyLinksEnhancement extends BaseEnhancement {
-    constructor() {
-        super();
-    }
-
     async apply() {
         const surveys = this.adapter.getSurveyElements();
         for (const survey of surveys) {
@@ -45,5 +41,4 @@ class SurveyLinksEnhancement extends BaseEnhancement {
     }
 }
 
-const surveyLinksEnhancement = new SurveyLinksEnhancement();
-export { surveyLinksEnhancement };
+export { SurveyLinksEnhancement };

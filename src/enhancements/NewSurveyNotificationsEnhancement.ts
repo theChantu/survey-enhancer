@@ -19,13 +19,16 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const surveys = this.adapter.extractSurveys();
         if (surveys.length === 0) return;
 
+        const { newSurveyNotifications } = await store.get(
+            this.adapter.config.name,
+            ["newSurveyNotifications"],
+        );
         const {
             surveys: previousSurveys,
             cachedResearchers: previousCachedResearchers,
-        } = await store.get(this.adapter.config.name, [
-            "surveys",
-            "cachedResearchers",
-        ]);
+            includedResearchers,
+            excludedResearchers,
+        } = newSurveyNotifications;
 
         const newSurveys = this.extractNewSurveys(previousSurveys, surveys);
         if (newSurveys.length === 0) return;
@@ -44,10 +47,6 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
                 newResearchers,
             );
 
-        const { includedResearchers, excludedResearchers } = await store.get(
-            this.adapter.config.name,
-            ["includedResearchers", "excludedResearchers"],
-        );
         const includedResearchersSet = new Set(includedResearchers);
         const excludedResearchersSet = new Set(excludedResearchers);
 
@@ -98,8 +97,10 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             cachedResearchers[name] = now;
         }
 
-        await store.set(this.adapter.config.name, {
-            cachedResearchers,
+        await store.update(this.adapter.config.name, {
+            newSurveyNotifications: {
+                cachedResearchers,
+            },
         });
     }
 
@@ -137,8 +138,10 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             previousClone[survey.id] = now;
         }
 
-        await store.set(this.adapter.config.name, {
-            surveys: previousClone,
+        await store.update(this.adapter.config.name, {
+            newSurveyNotifications: {
+                surveys: previousClone,
+            },
         });
     }
 
@@ -180,7 +183,4 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
     }
 }
 
-const newSurveyNotificationsEnhancement =
-    new NewSurveyNotificationsEnhancement();
-
-export { newSurveyNotificationsEnhancement };
+export { NewSurveyNotificationsEnhancement };

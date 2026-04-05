@@ -1,4 +1,4 @@
-export { surveyLinksEnhancement } from "./SurveyLinksEnhancement";
-export { newSurveyNotificationsEnhancement } from "./NewSurveyNotificationsEnhancement";
-export { convertCurrencyEnhancement } from "./ConvertCurrencyEnhancement";
-export { highlightRatesEnhancement } from "./HighlightRatesEnhancement";
+export { SurveyLinksEnhancement } from "./SurveyLinksEnhancement";
+export { NewSurveyNotificationsEnhancement } from "./NewSurveyNotificationsEnhancement";
+export { ConvertCurrencyEnhancement } from "./ConvertCurrencyEnhancement";
+export { HighlightRatesEnhancement } from "./HighlightRatesEnhancement";

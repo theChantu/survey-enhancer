@@ -11,7 +11,7 @@ import {
     type ExchangeRatesResponse,
 } from "../store/types";
 
-type ConversionRates = SiteSettings["conversionRates"];
+type ConversionRates = SiteSettings["currencyConversion"]["conversionRates"];
 function isExchangeRatesResponse(
     value: unknown,
 ): value is ExchangeRatesResponse {
@@ -74,10 +74,11 @@ function getSymbol(currency: Currency) {
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
-        const { selectedCurrency, conversionRates } = await store.get(
+        const { currencyConversion } = await store.get(
             this.adapter.config.name,
-            ["selectedCurrency", "conversionRates"],
+            ["currencyConversion"],
         );
+        const { selectedCurrency, conversionRates } = currencyConversion;
 
         const rewardElements = this.adapter.getRewardElements();
         const selectedSymbol = getSymbol(selectedCurrency);
@@ -156,8 +157,8 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         }
 
         if (updated) {
-            await store.set(this.adapter.config.name, {
-                conversionRates: rates,
+            await store.update(this.adapter.config.name, {
+                currencyConversion: { conversionRates: rates },
             });
         }
 
@@ -173,6 +174,4 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
     }
 }
 
-const convertCurrencyEnhancement = new ConvertCurrencyEnhancement();
-
-export { convertCurrencyEnhancement };
+export { ConvertCurrencyEnhancement };

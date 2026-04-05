@@ -1,10 +1,10 @@
-import getSiteAdapter from "../lib/getSiteAdapter";
+import type { BaseAdapter } from "@/adapters";
 
 export default abstract class BaseEnhancement {
     readonly adapter;
 
-    constructor() {
-        this.adapter = getSiteAdapter();
+    constructor(adapter: BaseAdapter) {
+        this.adapter = adapter;
     }
 
     abstract apply(): Promise<void>;

@@ -15,46 +15,45 @@ interface CurrencyConversionSettings {
 
 interface HighlightRatesSettings {}
 
-interface SurveyLinksSettings {
-    surveys: Record<string, ReturnType<typeof Date.now>>;
-}
+interface SurveyLinksSettings {}
 
 type researcherName = string;
 
 interface NewSurveyNotificationsSettings {
+    surveys: Record<string, ReturnType<typeof Date.now>>;
     cachedResearchers: Record<researcherName, ReturnType<typeof Date.now>>;
     excludedResearchers: researcherName[];
     includedResearchers: researcherName[];
 }
 
-interface ReloadSettings {
-    minReloadInterval: number;
-    maxReloadInterval: number;
-    enableAutoReload: boolean;
-}
-
 interface Analytics {
-    totalSurveyCompletions: number;
-    dailySurveyCompletions: {
-        timestamp: ReturnType<typeof Date.now>;
-        urls: string[];
+    analytics: {
+        totalSurveyCompletions: number;
+        dailySurveyCompletions: {
+            timestamp: ReturnType<typeof Date.now>;
+            urls: string[];
+        };
     };
 }
 
-interface EnhancementSettings {
-    enableNewSurveyNotifications: boolean;
-    enableCurrencyConversion: boolean;
-    enableHighlightRates: boolean;
-    enableSurveyLinks: boolean;
+interface ReloadSettings {
+    autoReload: {
+        enabled: boolean;
+        minInterval: number;
+        maxInterval: number;
+    };
 }
 
-type SiteSettings = EnhancementSettings &
-    CurrencyConversionSettings &
-    HighlightRatesSettings &
-    SurveyLinksSettings &
-    NewSurveyNotificationsSettings &
-    ReloadSettings &
-    Analytics;
+type EnhancementSetting<T> = { enabled: boolean } & T;
+
+export interface EnhancementSettings {
+    newSurveyNotifications: EnhancementSetting<NewSurveyNotificationsSettings>;
+    currencyConversion: EnhancementSetting<CurrencyConversionSettings>;
+    highlightRates: EnhancementSetting<HighlightRatesSettings>;
+    surveyLinks: EnhancementSetting<SurveyLinksSettings>;
+}
+
+type SiteSettings = EnhancementSettings & ReloadSettings & Analytics;
 
 interface GlobalSettings {
     enableDebug: boolean;

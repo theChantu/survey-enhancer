@@ -1,14 +1,16 @@
 import type { Settings } from "@/store/types";
-import type { SettingsUpdate } from "@/store/createStore";
+import type { SettingsUpdate, SettingsPatch } from "@/store/createStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 
-type StoreUpdateMessage = SettingsUpdate & {
+type StoreUpdateMessage = {
     siteName: SiteName;
+    data: SettingsPatch;
 };
 
-type StoreSetMessage = SettingsUpdate & {
+type StoreSetMessage = {
     siteName: SiteName;
+    data: SettingsUpdate;
 };
 
 type StoreMutationResponse = {
@@ -30,8 +32,8 @@ type NotificationMessage = {
 interface MessageMap {
     "store-fetch": StoreFetchMessage;
     notification: NotificationMessage;
-    "store-update": StoreUpdateMessage;
     "store-set": StoreSetMessage;
+    "store-update": StoreUpdateMessage;
     "store-changed": SettingsUpdate;
     fetch: { url: string };
     network: { url: string; method: string; statusCode: number };

@@ -207,31 +207,30 @@ function runBackgroundScript() {
     });
 
     onExtensionMessage("store-update", async (payload) => {
-        const { siteName, ...settings } = payload;
-        const data = await store.update(siteName, settings);
+        const { siteName, data: patch } = payload;
+        const data = await store.update(siteName, patch);
         return { siteName, data };
     });
 
     onExtensionMessage("store-set", async (payload) => {
         const { siteName, ...settings } = payload;
-        const data = await store.set(siteName, settings);
+        const data = await store.set(siteName, settings.data);
         return { siteName, data };
     });
 
     onExtensionMessage("survey-completion", async (payload) => {
         const { siteName, url } = payload;
-        const { totalSurveyCompletions, dailySurveyCompletions } =
-            await store.get(siteName, [
-                "totalSurveyCompletions",
-                "dailySurveyCompletions",
-            ]);
+        const { analytics } = await store.get(siteName, ["analytics"]);
+        const { totalSurveyCompletions, dailySurveyCompletions } = analytics;
 
         if (dailySurveyCompletions.urls.includes(url)) return;
 
         await store.update(siteName, {
-            totalSurveyCompletions: totalSurveyCompletions + 1,
-            dailySurveyCompletions: {
-                urls: [...dailySurveyCompletions.urls, url],
+            analytics: {
+                totalSurveyCompletions: totalSurveyCompletions + 1,
+                dailySurveyCompletions: {
+                    urls: [...dailySurveyCompletions.urls, url],
+                },
             },
         });
     });

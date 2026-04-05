@@ -23,7 +23,9 @@
     import { capitalize, cleanResearcherName } from "@/lib/utils";
     import { currencyKeys } from "@/store/types";
 
-    import type { Settings, SettingsUpdate } from "@/store/createStore";
+    import type { SettingsPatch } from "@/store/createStore";
+    import type { Message } from "@/messages/types";
+    import type { Settings } from "@/store/types";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
     import type { ProviderConfigMap } from "@/providers/providers";
 
@@ -48,17 +50,17 @@
     }
 
     async function applySettingsMutation(
-        type: "store-update" | "store-set",
+        type: "store-set" | "store-update",
         siteUrl: SupportedSites,
-        values: SettingsUpdate,
+        values: SettingsPatch,
     ) {
         if (!loadedSites[siteUrl]) return;
 
         try {
             const response = await sendExtensionMessage({
                 type,
-                data: { siteName: sites[siteUrl].name, ...values },
-            });
+                data: { siteName: sites[siteUrl].name, data: values },
+            } as Message<"store-update">);
             const current = loadedSites[siteUrl];
             if (!current) return;
             loadedSites[siteUrl] = { ...current, ...response.data };
@@ -69,7 +71,7 @@
 
     function queueSettingsMutation(
         type: "store-update" | "store-set",
-        values: SettingsUpdate,
+        values: SettingsPatch,
         siteUrl: SupportedSites = selectedSite,
     ) {
         settingsMutationQueue = settingsMutationQueue
@@ -82,14 +84,20 @@
 
     type ResearcherKey = Exclude<
         keyof NewSurveyNotificationsSettings,
-        "enableNewSurveyNotifications" | "cachedResearchers"
+        "surveys" | "cachedResearchers"
     >;
 
     function addResearcher(key: ResearcherKey, name: string) {
         const loadedSite = loadedSites[selectedSite];
-        if (!loadedSite || loadedSite[key].includes(name)) return;
+        if (
+            !loadedSite ||
+            loadedSite.newSurveyNotifications?.[key].includes(name)
+        )
+            return;
         void queueSettingsMutation("store-update", {
-            [key]: [...loadedSite[key], name],
+            newSurveyNotifications: {
+                [key]: [...loadedSite.newSurveyNotifications[key], name],
+            },
         });
     }
 
@@ -97,11 +105,15 @@
         const loadedSite = loadedSites[selectedSite];
         if (!loadedSite) return;
         void queueSettingsMutation("store-update", {
-            [key]: loadedSite[key].filter((n) => n !== name),
+            newSurveyNotifications: {
+                [key]: loadedSite.newSurveyNotifications[key].filter(
+                    (n) => n !== name,
+                ),
+            },
         });
     }
 
-    type ResettableKey = Exclude<keyof typeof defaultSettings, "enableDebug">;
+    type ResettableKey = keyof typeof defaultSettings;
 
     function resetKey(key: ResettableKey) {
         const siteUrl = selectedSite;
@@ -251,46 +263,51 @@
             <span>Loading settings...</span>
         </div>
     {:else}
-        {#if siteModules.has("SurveyLinks") || siteModules.has("HighlightRates")}
+        {#if siteModules.has("surveyLinks") || siteModules.has("highlightRates")}
             <Section title="General" icon={SettingsIcon}>
-                {#if siteModules.has("SurveyLinks")}
+                {#if siteModules.has("surveyLinks")}
                     <Toggle
                         title="Survey links"
                         description="Show direct survey links when available."
-                        value={currentSite?.enableSurveyLinks}
+                        value={currentSite?.surveyLinks.enabled}
                         onClick={() =>
                             queueSettingsMutation("store-update", {
-                                enableSurveyLinks:
-                                    !currentSite?.enableSurveyLinks,
+                                surveyLinks: {
+                                    enabled: !currentSite?.surveyLinks.enabled,
+                                },
                             })}
                     />
                 {/if}
 
-                {#if siteModules.has("HighlightRates")}
+                {#if siteModules.has("highlightRates")}
                     <Toggle
                         title="Highlight rates"
                         description="Visually emphasize stronger survey rates."
-                        value={currentSite?.enableHighlightRates}
+                        value={currentSite?.highlightRates.enabled}
                         onClick={() =>
                             queueSettingsMutation("store-update", {
-                                enableHighlightRates:
-                                    !currentSite?.enableHighlightRates,
+                                highlightRates: {
+                                    enabled:
+                                        !currentSite?.highlightRates.enabled,
+                                },
                             })}
                     />
                 {/if}
             </Section>
         {/if}
 
-        {#if siteModules.has("CurrencyConversion")}
+        {#if siteModules.has("currencyConversion")}
             <Section title="Currency" icon={CircleDollarSign}>
                 <Toggle
                     title="Currency conversion"
                     description="Convert rewards into your selected currency."
-                    value={currentSite?.enableCurrencyConversion}
+                    value={currentSite?.currencyConversion.enabled}
                     onClick={() =>
                         queueSettingsMutation("store-update", {
-                            enableCurrencyConversion:
-                                !currentSite?.enableCurrencyConversion,
+                            currencyConversion: {
+                                enabled:
+                                    !currentSite?.currencyConversion.enabled,
+                            },
                         })}
                 />
                 <Field label="Selected currency" id="currency">
@@ -298,11 +315,15 @@
                         <select
                             id="currency"
                             class="w-full py-2 pl-2.5 pr-8 rounded-md border border-white/8 bg-white/4 hover:bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none appearance-none cursor-pointer focus:border-white/20 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
-                            bind:value={currentSite.selectedCurrency}
+                            bind:value={
+                                currentSite.currencyConversion.selectedCurrency
+                            }
                             on:change={(e) =>
                                 queueSettingsMutation("store-update", {
-                                    selectedCurrency: e.currentTarget
-                                        .value as Settings["selectedCurrency"],
+                                    currencyConversion: {
+                                        selectedCurrency: e.currentTarget
+                                            .value as Settings["currencyConversion"]["selectedCurrency"],
+                                    },
                                 })}
                         >
                             {#each currencyKeys as currency}
@@ -319,24 +340,29 @@
             </Section>
         {/if}
 
-        {#if siteModules.has("NewSurveyNotifications")}
+        {#if siteModules.has("newSurveyNotifications")}
             <Section title="Notifications" icon={Bell}>
                 <Toggle
                     title="New survey notifications"
                     description="Send a desktop notification when a new survey appears."
-                    value={currentSite?.enableNewSurveyNotifications}
+                    value={currentSite?.newSurveyNotifications.enabled}
                     onClick={() =>
                         queueSettingsMutation("store-update", {
-                            enableNewSurveyNotifications:
-                                !currentSite?.enableNewSurveyNotifications,
+                            newSurveyNotifications: {
+                                enabled:
+                                    !currentSite?.newSurveyNotifications
+                                        .enabled,
+                            },
                         })}
                 />
-                {#if currentSite?.enableNewSurveyNotifications}
+                {#if currentSite?.newSurveyNotifications.enabled}
                     <TagInput
                         title="Included researchers"
-                        values={currentSite?.includedResearchers}
+                        values={currentSite?.newSurveyNotifications
+                            .includedResearchers}
                         suggestions={Object.keys(
-                            currentSite?.cachedResearchers,
+                            currentSite?.newSurveyNotifications
+                                .cachedResearchers,
                         )}
                         placeholder="Add researcher..."
                         clean={cleanResearcherName}
@@ -347,9 +373,11 @@
                     />
                     <TagInput
                         title="Excluded researchers"
-                        values={currentSite?.excludedResearchers}
+                        values={currentSite?.newSurveyNotifications
+                            .excludedResearchers}
                         suggestions={Object.keys(
-                            currentSite?.cachedResearchers,
+                            currentSite?.newSurveyNotifications
+                                .cachedResearchers,
                         )}
                         placeholder="Add researcher..."
                         clean={cleanResearcherName}
@@ -427,13 +455,15 @@
             <Toggle
                 title="Auto reload"
                 description="Periodically refresh the page in the background to check for new studies."
-                value={currentSite?.enableAutoReload}
+                value={currentSite?.autoReload.enabled}
                 onClick={() =>
                     queueSettingsMutation("store-update", {
-                        enableAutoReload: !currentSite?.enableAutoReload,
+                        autoReload: {
+                            enabled: !currentSite?.autoReload.enabled,
+                        },
                     })}
             />
-            {#if currentSite?.enableAutoReload}
+            {#if currentSite?.autoReload.enabled}
                 <Field label="Min interval (minutes)" id="min-interval">
                     <input
                         id="min-interval"
@@ -441,14 +471,16 @@
                         min="1"
                         step="1"
                         class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
-                        value={currentSite?.minReloadInterval}
+                        value={currentSite?.autoReload.minInterval}
                         on:change={(e) => {
                             const minutes = parsePositiveInt(
                                 e.currentTarget.value,
                             );
                             if (minutes === null) return;
                             queueSettingsMutation("store-update", {
-                                minReloadInterval: minutes,
+                                autoReload: {
+                                    minInterval: minutes,
+                                },
                             });
                         }}
                     />
@@ -460,14 +492,16 @@
                         min="1"
                         step="1"
                         class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
-                        value={currentSite?.maxReloadInterval}
+                        value={currentSite?.autoReload.maxInterval}
                         on:change={(e) => {
                             const minutes = parsePositiveInt(
                                 e.currentTarget.value,
                             );
                             if (minutes === null) return;
                             queueSettingsMutation("store-update", {
-                                maxReloadInterval: minutes,
+                                autoReload: {
+                                    maxInterval: minutes,
+                                },
                             });
                         }}
                     />

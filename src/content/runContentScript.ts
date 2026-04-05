@@ -1,13 +1,13 @@
 import "./style.css";
 import log from "@/lib/log";
 import { getRandomTimeoutMs, scheduleTimeout } from "../lib/utils";
-import runEnhancements from "../lib/runEnhancements";
 import getSiteAdapter from "../lib/getSiteAdapter";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { SettingsUpdate } from "@/store/createStore";
 import { defaultSettings, defaultSettingsKeys } from "@/store/defaultSettings";
 import debounce from "@/lib/debounce";
+import { EnhancementManager } from "../enhancements/EnhancementManager";
 
 import type { ContentScriptContext } from "#imports";
 
@@ -17,10 +17,25 @@ async function runContentScript(ctx: ContentScriptContext) {
     let observer: MutationObserver;
     const observerConfig = { childList: true, subtree: true };
 
+    const adapter = getSiteAdapter();
+
+    let siteSettings = (await sendExtensionMessage({
+        type: "store-fetch",
+        data: {
+            siteName: adapter.config.name,
+            settings: defaultSettingsKeys,
+        },
+    })) ?? { data: defaultSettings };
+
+    const enhancementManager = new EnhancementManager(
+        adapter,
+        siteSettings.data,
+    );
+
     async function safelyRunEnhancements() {
         observer.disconnect();
         try {
-            await runEnhancements();
+            await enhancementManager.run();
         } finally {
             observer.observe(document.body, observerConfig);
         }
@@ -29,7 +44,10 @@ async function runContentScript(ctx: ContentScriptContext) {
     const debounced = debounce(async (changed?: SettingsUpdate) => {
         observer.disconnect();
         try {
-            await runEnhancements(changed);
+            if (changed) {
+                enhancementManager.update(changed);
+            }
+            await enhancementManager.run();
         } finally {
             observer.observe(document.body, observerConfig);
         }
@@ -48,20 +66,9 @@ async function runContentScript(ctx: ContentScriptContext) {
     // Apply the enhancements initially
     await safelyRunEnhancements();
 
-    const adapter = getSiteAdapter();
+    const { minInterval, maxInterval, enabled } = siteSettings?.data.autoReload;
 
-    let siteSettings = (await sendExtensionMessage({
-        type: "store-fetch",
-        data: {
-            siteName: adapter.config.name,
-            settings: defaultSettingsKeys,
-        },
-    })) ?? { data: defaultSettings };
-
-    const { minReloadInterval, maxReloadInterval, enableAutoReload } =
-        siteSettings?.data;
-
-    const ms = getRandomTimeoutMs(minReloadInterval, maxReloadInterval);
+    const ms = getRandomTimeoutMs(minInterval, maxInterval);
     const pageReloadTimeout = scheduleTimeout(() => {
         if (!document.hidden) {
             pageReloadTimeout.reset();
@@ -82,8 +89,8 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    if (enableAutoReload) {
-        handleAutoReloadSettingChange(enableAutoReload);
+    if (enabled) {
+        handleAutoReloadSettingChange(enabled);
     }
 
     onExtensionMessage("store-changed", (payload) => {
@@ -91,30 +98,24 @@ async function runContentScript(ctx: ContentScriptContext) {
             siteSettings.data = { ...siteSettings.data, ...payload };
         }
 
-        const { minReloadInterval, maxReloadInterval, enableAutoReload } =
-            payload;
-        if (enableAutoReload !== undefined) {
-            handleAutoReloadSettingChange(enableAutoReload);
-        }
+        if (payload.autoReload) {
+            const { minInterval, maxInterval, enabled } = payload.autoReload;
+            if (enabled !== undefined) {
+                handleAutoReloadSettingChange(enabled);
+            }
 
-        if (
-            minReloadInterval !== undefined ||
-            maxReloadInterval !== undefined
-        ) {
-            const ms = getRandomTimeoutMs(
-                siteSettings.data.minReloadInterval,
-                siteSettings.data.maxReloadInterval,
-            );
-            log(
-                "Page refresh interval updated. New interval (ms):",
-                ms / (60 * 1000),
-            );
-            pageReloadTimeout.setDelay(ms);
+            if (minInterval !== undefined || maxInterval !== undefined) {
+                const ms = getRandomTimeoutMs(
+                    siteSettings.data.autoReload.minInterval,
+                    siteSettings.data.autoReload.maxInterval,
+                );
+                log(
+                    "Page refresh interval updated. New interval (ms):",
+                    ms / (60 * 1000),
+                );
+                pageReloadTimeout.setDelay(ms);
+            }
         }
-
-        // Ignore if only surveys changed
-        const keys = Object.keys(payload) as (keyof typeof payload)[];
-        if (keys.length === 1 && keys[0] === "surveys") return;
 
         debounced(payload);
     });

@@ -22,9 +22,11 @@ function rateToColor(rate: number, min = 7, max = 15) {
 
 class HighlightRatesEnhancement extends BaseEnhancement {
     async apply() {
-        const { conversionRates } = await store.get(this.adapter.config.name, [
-            "conversionRates",
-        ]);
+        const { currencyConversion } = await store.get(
+            this.adapter.config.name,
+            ["currencyConversion"],
+        );
+        const { conversionRates } = currencyConversion;
 
         const rateElements = this.adapter.getHourlyRateElements();
         for (const rateEl of rateElements) {
@@ -65,5 +67,4 @@ class HighlightRatesEnhancement extends BaseEnhancement {
     }
 }
 
-const highlightRatesEnhancement = new HighlightRatesEnhancement();
-export { highlightRatesEnhancement };
+export { HighlightRatesEnhancement };

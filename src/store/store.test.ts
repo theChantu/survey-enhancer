@@ -14,44 +14,45 @@ beforeEach(() => {
 describe("get", () => {
     it("returns defaults when nothing is stored", async () => {
         const store = createStore();
-        const result = await store.get(siteName, [
-            "enableCurrencyConversion",
-            "selectedCurrency",
-        ]);
+        const result = await store.get(siteName, ["currencyConversion"]);
 
-        expect(result.enableCurrencyConversion).toBe(
-            defaultSiteSettings.enableCurrencyConversion,
+        expect(result.currencyConversion.enabled).toBe(
+            defaultSiteSettings.currencyConversion.enabled,
         );
-        expect(result.selectedCurrency).toBe(
-            defaultSiteSettings.selectedCurrency,
+        expect(result.currencyConversion.selectedCurrency).toBe(
+            defaultSiteSettings.currencyConversion.selectedCurrency,
         );
     });
 
     it("returns stored site values merged over defaults", async () => {
         await mockStorage.setItem("local:prolific", {
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
 
         const store = createStore();
-        const result = await store.get(siteName, ["selectedCurrency"]);
+        const result = await store.get(siteName, ["currencyConversion"]);
 
-        expect(result.selectedCurrency).toBe("GBP");
+        expect(result.currencyConversion.selectedCurrency).toBe("GBP");
     });
 
     it("deep merges nested objects with defaults", async () => {
         await mockStorage.setItem("local:prolific", {
-            conversionRates: { USD: { timestamp: 999 } },
+            currencyConversion: {
+                conversionRates: { USD: { timestamp: 999 } },
+            },
         });
 
         const store = createStore();
-        const result = await store.get(siteName, ["conversionRates"]);
+        const result = await store.get(siteName, ["currencyConversion"]);
 
-        expect(result.conversionRates.USD.timestamp).toBe(999);
-        expect(result.conversionRates.USD.rates).toEqual(
-            defaultSiteSettings.conversionRates.USD.rates,
+        expect(result.currencyConversion.conversionRates.USD.timestamp).toBe(
+            999,
         );
-        expect(result.conversionRates.GBP).toEqual(
-            defaultSiteSettings.conversionRates.GBP,
+        expect(result.currencyConversion.conversionRates.USD.rates).toEqual(
+            defaultSiteSettings.currencyConversion.conversionRates.USD.rates,
+        );
+        expect(result.currencyConversion.conversionRates.GBP).toEqual(
+            defaultSiteSettings.currencyConversion.conversionRates.GBP,
         );
     });
 
@@ -73,29 +74,31 @@ describe("get", () => {
 
     it("reads from both storages when mixing site and global keys", async () => {
         await mockStorage.setItem("local:prolific", {
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
         await mockStorage.setItem("local:globals", { enableDebug: true });
 
         const store = createStore();
         const result = await store.get(siteName, [
-            "selectedCurrency",
+            "currencyConversion",
             "enableDebug",
         ]);
 
-        expect(result.selectedCurrency).toBe("GBP");
+        expect(result.currencyConversion.selectedCurrency).toBe("GBP");
         expect(result.enableDebug).toBe(true);
     });
 
     it("isolates sites from each other", async () => {
         await mockStorage.setItem("local:prolific", {
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
 
         const store = createStore();
-        const result = await store.get("cloudresearch", ["selectedCurrency"]);
+        const result = await store.get("cloudresearch", [
+            "currencyConversion",
+        ]);
 
-        expect(result.selectedCurrency).toBe("USD");
+        expect(result.currencyConversion.selectedCurrency).toBe("USD");
     });
 
     it("gets globals without siteName", async () => {
@@ -118,32 +121,42 @@ describe("get", () => {
 describe("set", () => {
     it("persists site values", async () => {
         const store = createStore();
-        await store.set(siteName, { selectedCurrency: "GBP" });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
-        const result = await store.get(siteName, ["selectedCurrency"]);
-        expect(result.selectedCurrency).toBe("GBP");
+        const result = await store.get(siteName, ["currencyConversion"]);
+        expect(result.currencyConversion.selectedCurrency).toBe("GBP");
     });
 
     it("preserves existing keys when setting new ones", async () => {
         const store = createStore();
-        await store.set(siteName, { selectedCurrency: "GBP" });
-        await store.set(siteName, { enableCurrencyConversion: false });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
+        await store.set(siteName, {
+            highlightRates: { enabled: false },
+        });
 
         const result = await store.get(siteName, [
-            "selectedCurrency",
-            "enableCurrencyConversion",
+            "currencyConversion",
+            "highlightRates",
         ]);
-        expect(result.selectedCurrency).toBe("GBP");
-        expect(result.enableCurrencyConversion).toBe(false);
+        expect(result.currencyConversion.selectedCurrency).toBe("GBP");
+        expect(result.highlightRates.enabled).toBe(false);
     });
 
     it("filters out undefined values", async () => {
         const store = createStore();
-        await store.set(siteName, { selectedCurrency: "GBP" });
-        await store.set(siteName, { selectedCurrency: undefined as any });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
+        await store.set(siteName, {
+            currencyConversion: undefined as any,
+        });
 
-        const result = await store.get(siteName, ["selectedCurrency"]);
-        expect(result.selectedCurrency).toBe("GBP");
+        const result = await store.get(siteName, ["currencyConversion"]);
+        expect(result.currencyConversion.selectedCurrency).toBe("GBP");
     });
 
     it("sets globals without siteName", async () => {
@@ -166,23 +179,25 @@ describe("set", () => {
         const store = createStore();
         await store.set(siteName, {
             enableDebug: true,
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
 
         const globalData = await mockStorage.getItem<any>("local:globals");
         const siteData = await mockStorage.getItem<any>("local:prolific");
 
         expect(globalData.enableDebug).toBe(true);
-        expect(globalData.selectedCurrency).toBeUndefined();
-        expect(siteData.selectedCurrency).toBe("GBP");
+        expect(globalData.currencyConversion).toBeUndefined();
+        expect(siteData.currencyConversion.selectedCurrency).toBe("GBP");
         expect(siteData.enableDebug).toBeUndefined();
     });
 
     it("returns persisted values for changed keys", async () => {
         const store = createStore();
-        const result = await store.set(siteName, { selectedCurrency: "GBP" });
+        const result = await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
-        expect(result.selectedCurrency).toBe("GBP");
+        expect(result.currencyConversion?.selectedCurrency).toBe("GBP");
     });
 });
 
@@ -190,54 +205,82 @@ describe("update", () => {
     it("deep merges nested objects", async () => {
         const store = createStore();
         await store.update(siteName, {
-            conversionRates: {
-                USD: { timestamp: 100, rates: { GBP: 0.8, USD: 1 } },
-                GBP: { timestamp: 100, rates: { USD: 1.2, GBP: 1 } },
+            currencyConversion: {
+                conversionRates: {
+                    USD: { timestamp: 100, rates: { GBP: 0.8, USD: 1 } },
+                    GBP: { timestamp: 100, rates: { USD: 1.2, GBP: 1 } },
+                },
             },
         });
 
         await store.update(siteName, {
-            conversionRates: {
-                USD: { timestamp: 200, rates: { GBP: 0.2, USD: 1.4 } },
+            currencyConversion: {
+                conversionRates: {
+                    USD: { timestamp: 200, rates: { GBP: 0.2, USD: 1.4 } },
+                },
             },
         });
 
-        const result = await store.get(siteName, ["conversionRates"]);
-        expect(result.conversionRates.USD.timestamp).toBe(200);
-        expect(result.conversionRates.USD.rates.GBP).toBe(0.2);
-        expect(result.conversionRates.USD.rates.USD).toBe(1.4);
-        expect(result.conversionRates.GBP.timestamp).toBe(100);
-        expect(result.conversionRates.GBP.rates.USD).toBe(1.2);
-        expect(result.conversionRates.GBP.rates.GBP).toBe(1);
+        const result = await store.get(siteName, ["currencyConversion"]);
+        expect(
+            result.currencyConversion.conversionRates.USD.timestamp,
+        ).toBe(200);
+        expect(
+            result.currencyConversion.conversionRates.USD.rates.GBP,
+        ).toBe(0.2);
+        expect(
+            result.currencyConversion.conversionRates.USD.rates.USD,
+        ).toBe(1.4);
+        expect(
+            result.currencyConversion.conversionRates.GBP.timestamp,
+        ).toBe(100);
+        expect(
+            result.currencyConversion.conversionRates.GBP.rates.USD,
+        ).toBe(1.2);
+        expect(
+            result.currencyConversion.conversionRates.GBP.rates.GBP,
+        ).toBe(1);
     });
 
     it("replaces primitive values", async () => {
         const store = createStore();
-        await store.set(siteName, { selectedCurrency: "USD" });
-        await store.update(siteName, { selectedCurrency: "GBP" });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "USD" },
+        });
+        await store.update(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
-        const result = await store.get(siteName, ["selectedCurrency"]);
-        expect(result.selectedCurrency).toBe("GBP");
+        const result = await store.get(siteName, ["currencyConversion"]);
+        expect(result.currencyConversion.selectedCurrency).toBe("GBP");
     });
 
     it("returns deeply merged updated values", async () => {
         const store = createStore();
         await store.update(siteName, {
-            conversionRates: {
-                USD: { timestamp: 100, rates: { GBP: 0.8, USD: 1 } },
-                GBP: { timestamp: 100, rates: { USD: 1.2, GBP: 1 } },
+            currencyConversion: {
+                conversionRates: {
+                    USD: { timestamp: 100, rates: { GBP: 0.8, USD: 1 } },
+                    GBP: { timestamp: 100, rates: { USD: 1.2, GBP: 1 } },
+                },
             },
         });
 
         const result = await store.update(siteName, {
-            conversionRates: {
-                USD: { timestamp: 200, rates: { GBP: 0.2, USD: 1.4 } },
+            currencyConversion: {
+                conversionRates: {
+                    USD: { timestamp: 200, rates: { GBP: 0.2, USD: 1.4 } },
+                },
             },
         });
 
-        expect(result.conversionRates).toBeDefined();
-        expect(result.conversionRates?.USD.timestamp).toBe(200);
-        expect(result.conversionRates?.GBP.timestamp).toBe(100);
+        expect(result.currencyConversion).toBeDefined();
+        expect(
+            result.currencyConversion?.conversionRates?.USD?.timestamp,
+        ).toBe(200);
+        expect(
+            result.currencyConversion?.conversionRates?.GBP?.timestamp,
+        ).toBe(100);
     });
 });
 
@@ -247,10 +290,12 @@ describe("subscribe", () => {
         const listener = vi.fn();
         store.subscribe("site", listener);
 
-        await store.set(siteName, { selectedCurrency: "GBP" });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
         expect(listener).toHaveBeenCalledWith(siteName, {
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
     });
 
@@ -273,12 +318,12 @@ describe("subscribe", () => {
 
         await store.set(siteName, {
             enableDebug: true,
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
 
         expect(globalListener).toHaveBeenCalledWith({ enableDebug: true });
         expect(siteListener).toHaveBeenCalledWith(siteName, {
-            selectedCurrency: "GBP",
+            currencyConversion: { selectedCurrency: "GBP" },
         });
     });
 
@@ -297,7 +342,9 @@ describe("subscribe", () => {
         const globalListener = vi.fn();
         store.subscribe("globals", globalListener);
 
-        await store.set(siteName, { selectedCurrency: "GBP" });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
         expect(globalListener).not.toHaveBeenCalled();
     });
@@ -308,7 +355,9 @@ describe("subscribe", () => {
         const unsubscribe = store.subscribe("site", listener);
 
         unsubscribe();
-        await store.set(siteName, { selectedCurrency: "GBP" });
+        await store.set(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
         expect(listener).not.toHaveBeenCalled();
     });
@@ -318,7 +367,9 @@ describe("subscribe", () => {
         const listener = vi.fn();
         store.subscribe("site", listener);
 
-        await store.update(siteName, { selectedCurrency: "GBP" });
+        await store.update(siteName, {
+            currencyConversion: { selectedCurrency: "GBP" },
+        });
 
         expect(listener).toHaveBeenCalledTimes(1);
     });
@@ -327,70 +378,243 @@ describe("subscribe", () => {
 describe("push", () => {
     it("appends items to an array", async () => {
         const store = createStore();
-        await store.push(siteName, "includedResearchers", "alice");
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "includedResearchers",
+            "alice",
+        );
 
-        const result = await store.get(siteName, ["includedResearchers"]);
-        expect(result.includedResearchers).toEqual(["alice"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.includedResearchers).toEqual([
+            "alice",
+        ]);
     });
 
     it("appends multiple items", async () => {
         const store = createStore();
-        await store.push(siteName, "includedResearchers", "alice", "bob");
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "includedResearchers",
+            "alice",
+            "bob",
+        );
 
-        const result = await store.get(siteName, ["includedResearchers"]);
-        expect(result.includedResearchers).toEqual(["alice", "bob"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.includedResearchers).toEqual([
+            "alice",
+            "bob",
+        ]);
     });
 
     it("does not add duplicates", async () => {
         const store = createStore();
-        await store.push(siteName, "includedResearchers", "alice");
-        await store.push(siteName, "includedResearchers", "alice");
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "includedResearchers",
+            "alice",
+        );
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "includedResearchers",
+            "alice",
+        );
 
-        const result = await store.get(siteName, ["includedResearchers"]);
-        expect(result.includedResearchers).toEqual(["alice"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.includedResearchers).toEqual([
+            "alice",
+        ]);
     });
 
     it("preserves existing items when pushing new ones", async () => {
         const store = createStore();
-        await store.push(siteName, "includedResearchers", "alice");
-        await store.push(siteName, "includedResearchers", "bob");
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "includedResearchers",
+            "alice",
+        );
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "includedResearchers",
+            "bob",
+        );
 
-        const result = await store.get(siteName, ["includedResearchers"]);
-        expect(result.includedResearchers).toEqual(["alice", "bob"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.includedResearchers).toEqual([
+            "alice",
+            "bob",
+        ]);
+    });
+});
+
+describe("field policies", () => {
+    it("resets dailySurveyCompletions when older than 24 hours", async () => {
+        const staleTimestamp = Date.now() - 25 * 60 * 60 * 1000;
+        await mockStorage.setItem("local:prolific", {
+            analytics: {
+                totalSurveyCompletions: 5,
+                dailySurveyCompletions: {
+                    timestamp: staleTimestamp,
+                    urls: ["https://example.com/survey1"],
+                },
+            },
+        });
+
+        const store = createStore();
+        const result = await store.get(siteName, ["analytics"]);
+
+        expect(result.analytics.dailySurveyCompletions.urls).toEqual([]);
+        expect(result.analytics.dailySurveyCompletions.timestamp).not.toBe(
+            staleTimestamp,
+        );
+    });
+
+    it("preserves totalSurveyCompletions when resetting daily", async () => {
+        const staleTimestamp = Date.now() - 25 * 60 * 60 * 1000;
+        await mockStorage.setItem("local:prolific", {
+            analytics: {
+                totalSurveyCompletions: 42,
+                dailySurveyCompletions: {
+                    timestamp: staleTimestamp,
+                    urls: ["https://example.com/survey1"],
+                },
+            },
+        });
+
+        const store = createStore();
+        const result = await store.get(siteName, ["analytics"]);
+
+        expect(result.analytics.totalSurveyCompletions).toBe(42);
+    });
+
+    it("does not reset dailySurveyCompletions when within 24 hours", async () => {
+        const recentTimestamp = Date.now() - 1 * 60 * 60 * 1000;
+        await mockStorage.setItem("local:prolific", {
+            analytics: {
+                totalSurveyCompletions: 3,
+                dailySurveyCompletions: {
+                    timestamp: recentTimestamp,
+                    urls: ["https://example.com/survey1"],
+                },
+            },
+        });
+
+        const store = createStore();
+        const result = await store.get(siteName, ["analytics"]);
+
+        expect(result.analytics.dailySurveyCompletions.timestamp).toBe(
+            recentTimestamp,
+        );
+        expect(result.analytics.dailySurveyCompletions.urls).toEqual([
+            "https://example.com/survey1",
+        ]);
+    });
+
+    it("persists the reset to storage", async () => {
+        const staleTimestamp = Date.now() - 25 * 60 * 60 * 1000;
+        await mockStorage.setItem("local:prolific", {
+            analytics: {
+                totalSurveyCompletions: 5,
+                dailySurveyCompletions: {
+                    timestamp: staleTimestamp,
+                    urls: ["https://example.com/survey1"],
+                },
+            },
+        });
+
+        const store = createStore();
+        await store.get(siteName, ["analytics"]);
+
+        const stored = await mockStorage.getItem<any>("local:prolific");
+        expect(stored.analytics.dailySurveyCompletions.urls).toEqual([]);
+        expect(stored.analytics.totalSurveyCompletions).toBe(5);
     });
 });
 
 describe("remove", () => {
     it("removes an item from an array", async () => {
         const store = createStore();
-        await store.push(siteName, "excludedResearchers", "alice", "bob");
-        await store.remove(siteName, "excludedResearchers", "alice");
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "excludedResearchers",
+            "alice",
+            "bob",
+        );
+        await store.remove(
+            siteName,
+            "newSurveyNotifications",
+            "excludedResearchers",
+            "alice",
+        );
 
-        const result = await store.get(siteName, ["excludedResearchers"]);
-        expect(result.excludedResearchers).toEqual(["bob"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.excludedResearchers).toEqual([
+            "bob",
+        ]);
     });
 
     it("does nothing if item is not in the array", async () => {
         const store = createStore();
-        await store.push(siteName, "excludedResearchers", "alice");
-        await store.remove(siteName, "excludedResearchers", "bob");
+        await store.push(
+            siteName,
+            "newSurveyNotifications",
+            "excludedResearchers",
+            "alice",
+        );
+        await store.remove(
+            siteName,
+            "newSurveyNotifications",
+            "excludedResearchers",
+            "bob",
+        );
 
-        const result = await store.get(siteName, ["excludedResearchers"]);
-        expect(result.excludedResearchers).toEqual(["alice"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.excludedResearchers).toEqual([
+            "alice",
+        ]);
     });
 
     it("removes multiple items at once", async () => {
         const store = createStore();
         await store.push(
             siteName,
+            "newSurveyNotifications",
             "excludedResearchers",
             "alice",
             "bob",
             "charlie",
         );
-        await store.remove(siteName, "excludedResearchers", "alice", "charlie");
+        await store.remove(
+            siteName,
+            "newSurveyNotifications",
+            "excludedResearchers",
+            "alice",
+            "charlie",
+        );
 
-        const result = await store.get(siteName, ["excludedResearchers"]);
-        expect(result.excludedResearchers).toEqual(["bob"]);
+        const result = await store.get(siteName, [
+            "newSurveyNotifications",
+        ]);
+        expect(result.newSurveyNotifications.excludedResearchers).toEqual([
+            "bob",
+        ]);
     });
 });

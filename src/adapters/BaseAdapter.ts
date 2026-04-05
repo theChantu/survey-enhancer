@@ -2,8 +2,8 @@ import { joinURL } from "ufo";
 import debounce from "@/lib/debounce";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
-import type { ModuleName } from "./modules/BaseModule";
 import type { SiteInfo, SupportedSites, sites } from "./siteConfigs";
+import { EnhancementKey } from "@/enhancements/enhancementConfigs";
 
 export type AdapterConfig<H extends SupportedSites = SupportedSites> =
     (typeof sites)[H] &
@@ -59,9 +59,9 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         this.config = config;
     }
 
-    private _moduleSet?: ReadonlySet<ModuleName>;
+    private _moduleSet?: ReadonlySet<EnhancementKey>;
 
-    hasModule(module: ModuleName): boolean {
+    hasModule(module: EnhancementKey): boolean {
         this._moduleSet ??= new Set(this.config.modules);
         return this._moduleSet.has(module);
     }

@@ -2,16 +2,39 @@ import { defaultSiteSettings } from "./defaultSiteSettings";
 import { defaultGlobalSettingsKeys } from "./defaultGlobalSettings";
 import { defaultSettings } from "./defaultSettings";
 import { storage } from "#imports";
+import { SiteName, sites } from "@/adapters/siteConfigs";
+import deepMerge from "@/lib/deepMerge";
 
 import type { SiteSettings, GlobalSettings, Settings } from "./types";
-import { SiteName, sites } from "@/adapters/siteConfigs";
+
+type DeepNonNullable<T> = T extends (...args: any[]) => any
+    ? T
+    : T extends object
+      ? { [K in keyof T]-?: DeepNonNullable<T[K]> }
+      : NonNullable<T>;
+
+export type DeepPartial<T> = T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;
+
+type NestedArrayKeys<K extends keyof SiteSettings> = {
+    [P in keyof SiteSettings[K]]: NonNullable<SiteSettings[K][P]> extends any[]
+        ? P
+        : never;
+}[keyof SiteSettings[K]];
 
 export type SettingsUpdate = Partial<Settings>;
+export type SettingsPatch = DeepPartial<Settings>;
 export type GlobalSettingsUpdate = Partial<GlobalSettings>;
 export type SiteSettingsUpdate = Partial<SiteSettings>;
 
 export type ResolvedSettings<K extends readonly (keyof Settings)[]> = Pick<
     { [P in keyof Settings]: DeepNonNullable<Settings[P]> },
+    K[number]
+>;
+
+type ResolvedGlobalSettings<K extends readonly (keyof GlobalSettings)[]> = Pick<
+    { [P in keyof GlobalSettings]: DeepNonNullable<GlobalSettings[P]> },
     K[number]
 >;
 
@@ -21,29 +44,18 @@ export type SiteListener = (
     changed: SiteSettingsUpdate,
 ) => void;
 
-type ResolvedGlobalSettings<K extends readonly (keyof GlobalSettings)[]> = Pick<
-    { [P in keyof GlobalSettings]: DeepNonNullable<GlobalSettings[P]> },
-    K[number]
->;
-
-type DeepNonNullable<T> = T extends (...args: any[]) => any
-    ? T
-    : T extends object
-      ? { [K in keyof T]-?: DeepNonNullable<T[K]> }
-      : NonNullable<T>;
-
-type DeepPartial<T> = T extends object
-    ? { [K in keyof T]?: DeepPartial<T[K]> }
-    : T;
+type SettingsPath = {
+    [K in keyof SiteSettings & string]:
+        | K
+        | (SiteSettings[K] extends object
+              ? `${K}.${keyof SiteSettings[K] & string}`
+              : never);
+}[keyof SiteSettings & string];
 
 type FieldPolicy = {
-    field: keyof SiteSettings;
+    field: SettingsPath;
     shouldReset: (value: any) => boolean;
 };
-
-type ArrayKeys = {
-    [K in keyof SiteSettings]: SiteSettings[K] extends any[] ? K : never;
-}[keyof SiteSettings];
 
 const GLOBALS_KEY = localKey("globals");
 const globalKeys = new Set<string>(defaultGlobalSettingsKeys);
@@ -53,7 +65,7 @@ const siteNames = new Set<SiteName>(
 
 const fieldPolicies: FieldPolicy[] = [
     {
-        field: "dailySurveyCompletions",
+        field: "analytics.dailySurveyCompletions",
         shouldReset: (v) => Date.now() - v.timestamp > 24 * 60 * 60 * 1000,
     },
 ];
@@ -62,44 +74,15 @@ function localKey(key: string) {
     return `local:${key}` as const;
 }
 
-function deepMerge(target: any, source: any): any {
-    if (source === undefined) return target;
-    if (Array.isArray(source) || Array.isArray(target)) return source;
-
-    if (
-        typeof target === "object" &&
-        target !== null &&
-        typeof source === "object" &&
-        source !== null
-    ) {
-        const merged = { ...target };
-        for (const key of Object.keys(source)) {
-            merged[key] = deepMerge(target[key], source[key]);
-        }
-        return merged;
-    }
-
-    return source;
+function isSiteName(value: unknown): value is SiteName {
+    return typeof value === "string" && siteNames.has(value as SiteName);
 }
 
-function parseOverloadArgs(
-    siteNameOrFirst: SiteName | unknown,
-    second?: any,
-): { siteName: SiteName | null; value: any } {
-    const hasSiteName =
-        typeof siteNameOrFirst === "string" &&
-        siteNames.has(siteNameOrFirst as SiteName);
-    return {
-        siteName: hasSiteName ? (siteNameOrFirst as SiteName) : null,
-        value: hasSiteName ? second : siteNameOrFirst,
-    };
-}
-
-function splitByScope(entries: [string, unknown][]) {
-    const global: [string, unknown][] = [];
-    const site: [string, unknown][] = [];
-    for (const entry of entries) {
-        (globalKeys.has(entry[0]) ? global : site).push(entry);
+function splitByScope(values: Record<string, unknown>) {
+    const global: Record<string, unknown> = {};
+    const site: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(values)) {
+        (globalKeys.has(key) ? global : site)[key] = val;
     }
     return { global, site };
 }
@@ -127,12 +110,22 @@ function resolveValues(
 ) {
     return Object.fromEntries(
         keys.map((k) => {
-            const stored = globalKeys.has(k as string)
-                ? (globals as Record<string, unknown>)[k as string]
-                : site[k as string];
+            const stored = globalKeys.has(k as string) ? globals[k] : site[k];
             return [k, deepMerge(defaultSettings[k], stored)];
         }),
     );
+}
+
+function getByPath(obj: any, path: string): any {
+    for (const key of path.split(".")) obj = obj?.[key];
+    return obj;
+}
+
+function setByPath(obj: any, path: string, value: any): void {
+    const keys = path.split(".");
+    const last = keys.pop()!;
+    for (const key of keys) obj = obj?.[key];
+    if (obj != null) obj[last] = value;
 }
 
 function applyPolicies(
@@ -140,18 +133,23 @@ function applyPolicies(
     siteName: SiteName | null,
     storedSite: Record<string, unknown>,
 ) {
-    const resets: Partial<SiteSettings> = {};
+    const dirtyTopKeys = new Set<string>();
+
     for (const policy of fieldPolicies) {
-        if (!(policy.field in result)) continue;
-        if (!policy.shouldReset(result[policy.field])) continue;
-        result[policy.field] = structuredClone(
-            defaultSiteSettings[policy.field],
+        const value = getByPath(result, policy.field);
+        if (value === undefined || !policy.shouldReset(value)) continue;
+        const defaultValue = structuredClone(
+            getByPath(defaultSiteSettings, policy.field),
         );
-        resets[policy.field] = result[policy.field];
+        setByPath(result, policy.field, defaultValue);
+        dirtyTopKeys.add(policy.field.split(".")[0]);
     }
 
-    if (Object.keys(resets).length > 0 && siteName !== null) {
-        storage.setItem(localKey(siteName), { ...storedSite, ...resets });
+    if (dirtyTopKeys.size > 0 && siteName !== null) {
+        const patch = Object.fromEntries(
+            [...dirtyTopKeys].map((k) => [k, result[k]]),
+        );
+        storage.setItem(localKey(siteName), { ...storedSite, ...patch });
     }
 }
 
@@ -161,15 +159,16 @@ export function createStore() {
 
     function notify(
         siteName: SiteName | null,
-        globalValues: GlobalSettingsUpdate,
-        siteValues: SiteSettingsUpdate,
+        globalValues: Record<string, unknown>,
+        siteValues: Record<string, unknown>,
     ) {
         if (Object.keys(globalValues).length > 0) {
-            for (const listener of globalListeners) listener(globalValues);
+            for (const listener of globalListeners)
+                listener(globalValues as GlobalSettingsUpdate);
         }
         if (Object.keys(siteValues).length > 0 && siteName !== null) {
             for (const listener of siteListeners)
-                listener(siteName, siteValues);
+                listener(siteName, siteValues as SiteSettingsUpdate);
         }
     }
 
@@ -184,10 +183,10 @@ export function createStore() {
         siteNameOrKeys: SiteName | readonly (keyof Settings)[],
         maybeKeys?: readonly (keyof Settings)[],
     ) {
-        const { siteName, value: keys } = parseOverloadArgs(
-            siteNameOrKeys,
-            maybeKeys,
-        );
+        const siteName = isSiteName(siteNameOrKeys) ? siteNameOrKeys : null;
+        const keys = (
+            siteName ? maybeKeys : siteNameOrKeys
+        ) as readonly (keyof Settings)[];
         const stored = await readStorage(siteName, keys as string[]);
         const result = resolveValues(keys, stored.globals, stored.site);
         applyPolicies(result, siteName, stored.site);
@@ -199,81 +198,65 @@ export function createStore() {
     ): Promise<GlobalSettingsUpdate>;
     async function set(
         siteName: SiteName,
-        values: SettingsUpdate,
+        values: SettingsPatch,
     ): Promise<SettingsUpdate>;
     async function set(
-        siteNameOrValues: SiteName | SettingsUpdate,
-        maybeValues?: SettingsUpdate,
+        siteNameOrValues: SiteName | SettingsPatch,
+        maybeValues?: SettingsPatch,
     ) {
-        const { siteName, value: values } = parseOverloadArgs(
-            siteNameOrValues,
-            maybeValues,
-        );
+        const siteName = isSiteName(siteNameOrValues) ? siteNameOrValues : null;
+        const values = (siteName ? maybeValues : siteNameOrValues) as Record<
+            string,
+            unknown
+        >;
 
         const filtered = Object.fromEntries(
             Object.entries(values).filter(([, v]) => v !== undefined),
         );
-        const { global: globalEntries, site: siteEntries } = splitByScope(
-            Object.entries(filtered),
-        );
+        const { global: globalValues, site: siteValues } =
+            splitByScope(filtered);
 
         const writes: Promise<void>[] = [];
 
-        if (globalEntries.length > 0) {
+        if (Object.keys(globalValues).length > 0) {
             const stored =
                 (await storage.getItem<Partial<GlobalSettings>>(GLOBALS_KEY)) ??
                 {};
             writes.push(
-                storage.setItem(GLOBALS_KEY, {
-                    ...stored,
-                    ...Object.fromEntries(globalEntries),
-                }),
+                storage.setItem(GLOBALS_KEY, { ...stored, ...globalValues }),
             );
         }
 
-        if (siteEntries.length > 0 && siteName !== null) {
+        if (Object.keys(siteValues).length > 0 && siteName !== null) {
             const siteKey = localKey(siteName);
             const stored =
                 (await storage.getItem<SiteSettingsUpdate>(siteKey)) ?? {};
-            writes.push(
-                storage.setItem(siteKey, {
-                    ...stored,
-                    ...Object.fromEntries(siteEntries),
-                }),
-            );
+            writes.push(storage.setItem(siteKey, { ...stored, ...siteValues }));
         }
 
         await Promise.all(writes);
-        notify(
-            siteName,
-            Object.fromEntries(globalEntries) as GlobalSettingsUpdate,
-            Object.fromEntries(siteEntries) as SiteSettingsUpdate,
-        );
+        notify(siteName, globalValues, siteValues);
 
         if (siteName === null) {
-            const changedGlobalKeys = globalEntries.map(
-                ([k]) => k as keyof GlobalSettings,
-            );
-            if (changedGlobalKeys.length === 0) {
-                return {} as GlobalSettingsUpdate;
-            }
-            return (await get(changedGlobalKeys)) as GlobalSettingsUpdate;
+            const changedKeys = Object.keys(
+                globalValues,
+            ) as (keyof GlobalSettings)[];
+            return changedKeys.length > 0
+                ? ((await get(changedKeys)) as GlobalSettingsUpdate)
+                : ({} as GlobalSettingsUpdate);
         }
 
         const changedKeys = Object.keys(filtered) as (keyof Settings)[];
-        if (changedKeys.length === 0) {
-            return {} as SettingsUpdate;
-        }
-        return (await get(siteName, changedKeys)) as SettingsUpdate;
+        return changedKeys.length > 0
+            ? ((await get(siteName, changedKeys)) as SettingsUpdate)
+            : ({} as SettingsUpdate);
     }
 
-    async function update(siteName: SiteName, values: DeepPartial<Settings>) {
+    async function update(siteName: SiteName, values: SettingsPatch) {
         const keys = Object.keys(values) as (keyof Settings)[];
-        if (keys.length === 0) {
-            return {} as SettingsUpdate;
-        }
-        const current = await get(siteName, keys);
+        if (keys.length === 0) return {} as SettingsUpdate;
 
+        const current = await get(siteName, keys);
         const merged = Object.fromEntries(
             keys.map((k) => [k, deepMerge(current[k], values[k])]),
         ) as SettingsUpdate;
@@ -281,31 +264,53 @@ export function createStore() {
         return await set(siteName, merged);
     }
 
-    async function push<K extends ArrayKeys>(
+    async function getNestedArray<K extends keyof SiteSettings>(
         siteName: SiteName,
         key: K,
-        ...items: SiteSettings[K] extends (infer U)[] ? U[] : never
+        prop: string,
     ) {
         const current = await get(siteName, [key]);
-        const arr = current[key] as unknown[];
-        const unique = items.filter((item) => !arr.includes(item));
-        if (unique.length === 0) return;
-        await set(siteName, {
-            [key]: [...arr, ...unique],
-        } as SiteSettingsUpdate);
+        const parent = current[key] as Record<string, unknown>;
+        return ((parent[prop] ?? []) as unknown[]).slice();
     }
 
-    async function remove<K extends ArrayKeys>(
+    async function push<
+        K extends keyof SiteSettings,
+        P extends NestedArrayKeys<K>,
+    >(
         siteName: SiteName,
         key: K,
-        ...items: SiteSettings[K] extends (infer U)[] ? U[] : never
+        prop: P,
+        ...items: NonNullable<SiteSettings[K][P]> extends (infer U)[]
+            ? U[]
+            : never
     ) {
-        const current = await get(siteName, [key]);
-        const arr = current[key] as unknown[];
+        const arr = await getNestedArray(siteName, key, prop as string);
+        const unique = items.filter((item) => !arr.includes(item));
+        if (unique.length === 0) return;
+        await update(siteName, {
+            [key]: { [prop]: [...arr, ...unique] },
+        } as any);
+    }
+
+    async function remove<
+        K extends keyof SiteSettings,
+        P extends NestedArrayKeys<K>,
+    >(
+        siteName: SiteName,
+        key: K,
+        prop: P,
+        ...items: NonNullable<SiteSettings[K][P]> extends (infer U)[]
+            ? U[]
+            : never
+    ) {
+        const arr = await getNestedArray(siteName, key, prop as string);
         const removeSet = new Set(items);
         const filtered = arr.filter((item) => !removeSet.has(item));
         if (filtered.length === arr.length) return;
-        await set(siteName, { [key]: filtered } as SiteSettingsUpdate);
+        await update(siteName, {
+            [key]: { [prop]: filtered },
+        } as any);
     }
 
     function subscribe(topic: "globals", listener: GlobalListener): () => void;
