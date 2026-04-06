@@ -29,7 +29,7 @@
         defaultSiteSettings,
         defaultSiteSettingsKeys,
     } from "@/store/defaultSiteSettings";
-    import { applyMutation } from "./handlers/mutations";
+    import { applyMutation } from "./handlers/applyMutation";
 
     import type { GlobalSettings, SiteSettings } from "@/store/types";
     import type { NewSurveyNotificationsSettings } from "@/store/types";

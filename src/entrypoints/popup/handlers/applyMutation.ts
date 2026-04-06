@@ -7,9 +7,7 @@ import type {
     StoreMutationMessageType,
 } from "@/messages/types";
 
-type PopupMutationType = Exclude<StoreMutationMessageType, "store-fetch">;
-
-export async function applyMutation<T extends PopupMutationType>(
+export async function applyMutation<T extends StoreMutationMessageType>(
     type: T,
     data: MessageMap[T],
 ): Promise<MessageResponse<T>> {
