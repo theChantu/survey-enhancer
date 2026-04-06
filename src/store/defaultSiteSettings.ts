@@ -1,28 +1,8 @@
-import { currencyKeys } from "./types";
-
-import type { SiteSettings, Currency } from "./types";
-
-const conversionRates: SiteSettings["currencyConversion"]["conversionRates"] = {
-    ...(Object.fromEntries(
-        currencyKeys.map((baseCurrency) => [
-            baseCurrency,
-            {
-                timestamp: 0,
-                rates: Object.fromEntries(
-                    currencyKeys.map((targetCurrency) => [targetCurrency, 1]),
-                ) as Record<Currency, number>,
-            },
-        ]),
-    ) as Record<
-        Currency,
-        { timestamp: number; rates: Record<Currency, number> }
-    >),
-};
+import type { SiteSettings } from "./types";
 
 const defaultSiteSettings = Object.freeze({
     currencyConversion: {
         enabled: true,
-        conversionRates,
         selectedCurrency: "USD",
     },
     highlightRates: {

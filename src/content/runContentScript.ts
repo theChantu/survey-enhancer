@@ -91,16 +91,10 @@ async function runContentScript(ctx: ContentScriptContext) {
     }
 
     onExtensionMessage("store-changed", (payload) => {
-        if (
-            payload.namespace !== "globals" &&
-            payload.namespace !== adapter.config.name
-        ) {
-            return;
-        }
-
         if (payload.namespace === "globals") {
             globals = deepMerge(globals, payload.data);
         } else {
+            if (payload.entry !== adapter.config.name) return;
             site = deepMerge(site, payload.data);
 
             if (payload.data.autoReload) {

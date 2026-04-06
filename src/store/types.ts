@@ -1,4 +1,3 @@
-import type { SiteName } from "@/adapters/siteConfigs";
 import type { ProviderConfigMap } from "@/providers/providers";
 
 type Enhancement = {
@@ -7,10 +6,6 @@ type Enhancement = {
 };
 
 interface CurrencyConversionSettings {
-    conversionRates: Record<
-        Currency,
-        { timestamp: number; rates: Record<Currency, number> }
-    >;
     selectedCurrency: Currency;
 }
 
@@ -57,6 +52,10 @@ export interface EnhancementSettings {
 type SiteSettings = EnhancementSettings & ReloadSettings & Analytics;
 
 interface GlobalSettings {
+    conversionRates: Record<
+        Currency,
+        { timestamp: number; rates: Record<Currency, number> }
+    >;
     enableDebug: boolean;
     idleThreshold: number;
     providers: Partial<ProviderConfigMap>;

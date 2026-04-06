@@ -23,10 +23,11 @@ export async function loadSettings(
     let siteSettings = (await sendExtensionMessage({
         type: "store-fetch",
         data: {
-            namespace: siteName,
+            namespace: "sites",
+            entry: siteName,
             data: { keys: defaultSiteSettingsKeys },
         },
-    })) ?? { namespace: siteName, data: defaultSiteSettings };
+    })) ?? { namespace: "sites", entry: siteName, data: defaultSiteSettings };
 
     let globalSettings = (await sendExtensionMessage({
         type: "store-fetch",

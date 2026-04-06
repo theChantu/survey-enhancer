@@ -1,4 +1,4 @@
-import type { GlobalSettings, Settings, SiteSettings } from "@/store/types";
+import type { GlobalSettings, SiteSettings } from "@/store/types";
 import type {
     SiteSettingsSet,
     GlobalSettingsSet,
@@ -10,35 +10,43 @@ import type {
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 
-type Namespaced<TGlobal, TSite> =
-    | {
-          namespace: "globals";
-          data: TGlobal;
-      }
-    | {
-          namespace: SiteName;
-          data: TSite;
-      };
+type GlobalsTarget<TData> = {
+    namespace: "globals";
+    data: TData;
+};
 
-export type StorePatchMessage = Namespaced<
+type SiteEntryTarget<TData> = {
+    namespace: "sites";
+    entry: SiteName;
+    data: TData;
+};
+
+type StoreTarget<TGlobal, TSite> =
+    | GlobalsTarget<TGlobal>
+    | SiteEntryTarget<TSite>;
+
+export type StorePatchMessage = StoreTarget<
     GlobalSettingsPatch,
     SiteSettingsPatch
 >;
-export type StorePatchResponse = Namespaced<GlobalSettingsSet, SiteSettingsSet>;
+export type StorePatchResponse = StoreTarget<
+    GlobalSettingsSet,
+    SiteSettingsSet
+>;
 
-export type StoreSetMessage = Namespaced<GlobalSettingsSet, SiteSettingsSet>;
-export type StoreSetResponse = Namespaced<GlobalSettingsSet, SiteSettingsSet>;
+export type StoreSetMessage = StoreTarget<GlobalSettingsSet, SiteSettingsSet>;
+export type StoreSetResponse = StoreTarget<GlobalSettingsSet, SiteSettingsSet>;
 
-export type StoreChangedMessage = Namespaced<
+export type StoreChangedMessage = StoreTarget<
     GlobalSettingsChange,
     SiteSettingsChange
 >;
 
-export type StoreFetchMessage = Namespaced<
+export type StoreFetchMessage = StoreTarget<
     { keys: readonly (keyof GlobalSettings)[] },
     { keys: readonly (keyof SiteSettings)[] }
 >;
-export type StoreFetchResponse = Namespaced<
+export type StoreFetchResponse = StoreTarget<
     Partial<GlobalSettings>,
     Partial<SiteSettings>
 >;

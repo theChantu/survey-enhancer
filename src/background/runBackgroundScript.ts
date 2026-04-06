@@ -183,7 +183,7 @@ function runBackgroundScript() {
     });
 
     for (const siteName of supportedSites) {
-        store.site(siteName).subscribe(async (changed) => {
+        store.sites.entry(siteName).subscribe(async (changed) => {
             const tabs = await browser.tabs.query({});
 
             for (const tab of tabs) {
@@ -192,7 +192,7 @@ function runBackgroundScript() {
 
                 await sendTabMessage(tab.id, {
                     type: "store-changed",
-                    data: { namespace: siteName, data: changed },
+                    data: { namespace: "sites", entry: siteName, data: changed },
                 });
             }
         });
@@ -221,12 +221,14 @@ function runBackgroundScript() {
 
     onExtensionMessage("survey-completion", async (payload) => {
         const { siteName, url } = payload;
-        const { analytics } = await store.site(siteName).get(["analytics"]);
+        const { analytics } = await store.sites.entry(siteName).get([
+            "analytics",
+        ]);
         const { totalSurveyCompletions, dailySurveyCompletions } = analytics;
 
         if (dailySurveyCompletions.urls.includes(url)) return;
 
-        await store.site(siteName).patch({
+        await store.sites.entry(siteName).patch({
             analytics: {
                 totalSurveyCompletions: totalSurveyCompletions + 1,
                 dailySurveyCompletions: {

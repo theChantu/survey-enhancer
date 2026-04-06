@@ -75,7 +75,7 @@
                 }
 
                 const siteUrl = siteKeys.find(
-                    (url) => sites[url].name === result.namespace,
+                    (url) => sites[url].name === result.entry,
                 );
                 if (!siteUrl) return;
 
@@ -94,6 +94,13 @@
         return settingsMutationQueue;
     }
 
+    function siteTarget(siteUrl: SupportedHosts = selectedSite) {
+        return {
+            namespace: "sites" as const,
+            entry: sites[siteUrl].name,
+        };
+    }
+
     type ResearcherKey = Exclude<
         keyof NewSurveyNotificationsSettings,
         "surveys" | "cachedResearchers"
@@ -107,7 +114,7 @@
         )
             return;
         void queueMutation("store-patch", {
-            namespace: sites[selectedSite].name,
+            ...siteTarget(),
             data: {
                 newSurveyNotifications: {
                     [key]: [...loadedSite.newSurveyNotifications[key], name],
@@ -120,7 +127,7 @@
         const loadedSite = loadedSettings.sites[selectedSite];
         if (!loadedSite) return;
         void queueMutation("store-patch", {
-            namespace: sites[selectedSite].name,
+            ...siteTarget(),
             data: {
                 newSurveyNotifications: {
                     [key]: loadedSite.newSurveyNotifications[key].filter(
@@ -177,7 +184,7 @@
         const next = structuredClone(defaultSiteSettings[key]);
 
         void queueMutation("store-set", {
-            namespace: sites[siteUrl].name,
+            ...siteTarget(siteUrl),
             data: { [key]: next },
         });
 
@@ -186,7 +193,7 @@
             actionLabel: "Undo",
             onAction: () =>
                 queueMutation("store-set", {
-                    namespace: sites[siteUrl].name,
+                    ...siteTarget(siteUrl),
                     data: { [key]: previous },
                 }),
         });
@@ -271,7 +278,7 @@
             const response = await sendExtensionMessage({
                 type: "store-fetch",
                 data: {
-                    namespace: sites[siteUrl].name,
+                    ...siteTarget(siteUrl),
                     data: { keys: defaultSiteSettingsKeys },
                 },
             });
@@ -349,7 +356,7 @@
                         value={currentSite?.surveyLinks.enabled}
                         onClick={() =>
                             queueMutation("store-patch", {
-                                namespace: sites[selectedSite].name,
+                                ...siteTarget(),
                                 data: {
                                     surveyLinks: {
                                         enabled:
@@ -367,7 +374,7 @@
                         value={currentSite?.highlightRates.enabled}
                         onClick={() =>
                             queueMutation("store-patch", {
-                                namespace: sites[selectedSite].name,
+                                ...siteTarget(),
                                 data: {
                                     highlightRates: {
                                         enabled:
@@ -389,7 +396,7 @@
                     value={currentSite?.currencyConversion.enabled}
                     onClick={() =>
                         queueMutation("store-patch", {
-                            namespace: sites[selectedSite].name,
+                            ...siteTarget(),
                             data: {
                                 currencyConversion: {
                                     enabled:
@@ -409,7 +416,7 @@
                             }
                             on:change={(e) =>
                                 queueMutation("store-patch", {
-                                    namespace: sites[selectedSite].name,
+                                    ...siteTarget(),
                                     data: {
                                         currencyConversion: {
                                             selectedCurrency: e.currentTarget
@@ -440,7 +447,7 @@
                     value={currentSite?.newSurveyNotifications.enabled}
                     onClick={() =>
                         queueMutation("store-patch", {
-                            namespace: sites[selectedSite].name,
+                            ...siteTarget(),
                             data: {
                                 newSurveyNotifications: {
                                     enabled:
@@ -573,7 +580,7 @@
                 value={currentSite?.autoReload.enabled}
                 onClick={() =>
                     queueMutation("store-patch", {
-                        namespace: sites[selectedSite].name,
+                        ...siteTarget(),
                         data: {
                             autoReload: {
                                 enabled: !currentSite?.autoReload.enabled,
@@ -596,7 +603,7 @@
                             );
                             if (minutes === null) return;
                             queueMutation("store-patch", {
-                                namespace: sites[selectedSite].name,
+                                ...siteTarget(),
                                 data: {
                                     autoReload: {
                                         minInterval: minutes,
@@ -620,7 +627,7 @@
                             );
                             if (minutes === null) return;
                             queueMutation("store-patch", {
-                                namespace: sites[selectedSite].name,
+                                ...siteTarget(),
                                 data: {
                                     autoReload: {
                                         maxInterval: minutes,

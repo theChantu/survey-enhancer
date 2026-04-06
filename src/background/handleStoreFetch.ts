@@ -10,6 +10,9 @@ export async function handleStoreFetch(
         return { namespace: payload.namespace, data };
     }
 
-    const data = await store.site(payload.namespace).get(payload.data.keys);
-    return { namespace: payload.namespace, data };
+    const data = await store
+        .namespace("sites")
+        .entry(payload.entry)
+        .get(payload.data.keys);
+    return { namespace: "sites", entry: payload.entry, data };
 }

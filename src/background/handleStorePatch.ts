@@ -10,6 +10,9 @@ export async function handleStorePatch(
         return { namespace: "globals", data };
     }
 
-    const data = await store.site(payload.namespace).patch(payload.data);
-    return { namespace: payload.namespace, data };
+    const data = await store
+        .namespace("sites")
+        .entry(payload.entry)
+        .patch(payload.data);
+    return { namespace: "sites", entry: payload.entry, data };
 }

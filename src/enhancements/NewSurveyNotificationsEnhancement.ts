@@ -96,7 +96,8 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         await sendExtensionMessage({
             type: "store-patch",
             data: {
-                namespace: this.adapter.config.name,
+                namespace: "sites",
+                entry: this.adapter.config.name,
                 data: {
                     newSurveyNotifications: {
                         cachedResearchers,
@@ -143,7 +144,8 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         await sendExtensionMessage({
             type: "store-patch",
             data: {
-                namespace: this.adapter.config.name,
+                namespace: "sites",
+                entry: this.adapter.config.name,
                 data: {
                     newSurveyNotifications: {
                         surveys: previousClone,

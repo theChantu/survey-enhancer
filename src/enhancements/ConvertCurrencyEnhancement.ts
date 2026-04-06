@@ -5,12 +5,12 @@ import { getCurrency } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import {
     currencyKeysSet,
-    type SiteSettings,
     type Currency,
     type ExchangeRatesResponse,
+    GlobalSettings,
 } from "../store/types";
 
-type ConversionRates = SiteSettings["currencyConversion"]["conversionRates"];
+type ConversionRates = GlobalSettings["conversionRates"];
 function isExchangeRatesResponse(
     value: unknown,
 ): value is ExchangeRatesResponse {
@@ -73,8 +73,8 @@ function getSymbol(currency: Currency) {
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
-        const { currencyConversion } = this.settings;
-        const { selectedCurrency, conversionRates } = currencyConversion;
+        const { currencyConversion, conversionRates } = this.settings;
+        const { selectedCurrency } = currencyConversion;
 
         const rewardElements = this.adapter.getRewardElements();
         const selectedSymbol = getSymbol(selectedCurrency);
@@ -156,9 +156,9 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             await sendExtensionMessage({
                 type: "store-patch",
                 data: {
-                    namespace: this.adapter.config.name,
+                    namespace: "globals",
                     data: {
-                        currencyConversion: { conversionRates: rates },
+                        conversionRates: rates,
                     },
                 },
             });

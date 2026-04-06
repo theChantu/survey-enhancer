@@ -10,6 +10,8 @@ export async function handleStoreSet(
         return { namespace: "globals", data };
     }
 
-    const data = await store.site(payload.namespace).set(payload.data);
-    return { namespace: payload.namespace, data };
+    const data = await store.namespace("sites").entry(payload.entry).set(
+        payload.data,
+    );
+    return { namespace: "sites", entry: payload.entry, data };
 }
