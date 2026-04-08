@@ -12,7 +12,7 @@
 
 <Section title="Auto reload" icon={RefreshCw}>
     <ToggleControl
-        title="Enable auto reload"
+        title="Auto reload"
         description="Periodically refresh the page in the background to check for new studies."
         value={model.autoReload.enabled}
         onClick={model.onToggle}
@@ -24,7 +24,7 @@
                     type="number"
                     min="1"
                     step="1"
-                    class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
+                    class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
                     value={model.autoReload.minInterval}
                     onchange={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);
@@ -39,7 +39,7 @@
                     type="number"
                     min="1"
                     step="1"
-                    class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
+                    class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
                     value={model.autoReload.maxInterval}
                     onchange={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);

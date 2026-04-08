@@ -8,9 +8,9 @@
     let { model }: { model: HighlightSettingsModel } = $props();
 </script>
 
-<Section title="Rate Highlights" icon={Highlighter}>
+<Section title="Highlights" icon={Highlighter}>
     <ToggleControl
-        title="Enable Highlights"
+        title="Rate highlights"
         description="Visually emphasize stronger survey rates."
         value={model.highlightRates.enabled}
         onClick={model.onToggle}

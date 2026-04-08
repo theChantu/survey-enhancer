@@ -232,6 +232,10 @@ function runBackgroundScript() {
         await store.sites.entry(siteName).update((current) => {
             const nextDailyCount =
                 current.analytics.dailySurveyCompletions.count + 1;
+            const nextTimestamp =
+                current.analytics.dailySurveyCompletions.count === 0
+                    ? Date.now()
+                    : current.analytics.dailySurveyCompletions.timestamp;
 
             return {
                 analytics: {
@@ -243,6 +247,7 @@ function runBackgroundScript() {
                     ),
                     dailySurveyCompletions: {
                         count: nextDailyCount,
+                        timestamp: nextTimestamp,
                     },
                 },
             };

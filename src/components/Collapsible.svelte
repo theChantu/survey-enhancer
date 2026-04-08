@@ -18,10 +18,14 @@
         children,
     }: CollapsibleProps = $props();
 
+    let loaded = false;
     let open = $state(false);
 
     $effect(() => {
-        open = defaultOpen;
+        if (!loaded) {
+            open = defaultOpen;
+            loaded = true;
+        }
     });
 
     function toggle() {

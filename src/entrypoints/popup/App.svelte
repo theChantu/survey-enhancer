@@ -43,7 +43,7 @@
     <div>
         <div class="relative text-gray-500">
             <select
-                class="w-full py-2 pl-2.5 pr-8 rounded-md border border-white/8 bg-white/4 hover:bg-white/4 text-gray-100 text-[0.9rem] font-semibold font-[inherit] outline-none appearance-none cursor-pointer focus:border-white/20 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
+                class="w-full rounded-md border border-white/8 bg-white/4 py-2.5 pl-3 pr-11 text-[0.82rem] font-medium font-[inherit] text-gray-200 outline-none appearance-none cursor-pointer transition-colors duration-150 hover:bg-white/5 focus:border-white/18 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
                 value={activeSite.url}
                 onchange={(e) =>
                     selectHost(e.currentTarget.value as SupportedHosts)}
@@ -55,9 +55,9 @@
                 {/each}
             </select>
             <div
-                class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rounded-full border border-white/8 bg-white/4 p-1 text-gray-500"
             >
-                <ChevronDown size={14} />
+                <ChevronDown size={12} strokeWidth={2.4} />
             </div>
         </div>
     </div>

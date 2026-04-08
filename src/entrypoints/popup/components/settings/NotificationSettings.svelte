@@ -10,9 +10,9 @@
     let { model }: { model: NotificationSettingsModel } = $props();
 </script>
 
-<Section title="Notifications" icon={Bell}>
+<Section title="Alerts" icon={Bell}>
     <ToggleControl
-        title="Enable Notifications"
+        title="New survey alerts"
         description="Send a desktop notification when a new survey appears."
         value={model.newSurveyNotifications.enabled}
         onClick={model.onToggle}

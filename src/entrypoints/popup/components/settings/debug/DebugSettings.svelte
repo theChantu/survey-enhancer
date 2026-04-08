@@ -12,7 +12,7 @@
 
 <Section title="Developer" icon={Bug}>
     <ToggleControl
-        title="Enable developer mode"
+        title="Developer mode"
         description="Log extension activity to the browser console."
         value={model.settingsState.globals.enableDebug}
         onClick={model.onToggle}

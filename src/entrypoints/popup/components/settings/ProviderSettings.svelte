@@ -31,7 +31,7 @@
             type="number"
             min="1"
             step="1"
-            class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
+            class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
             value={Math.max(1, Math.round(model.idleThreshold / 60))}
             onchange={(e) => {
                 const minutes = parsePositiveInt(e.currentTarget.value);
@@ -52,7 +52,7 @@
                     <input
                         id="telegram-bot-token"
                         type="password"
-                        class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
+                        class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
                         value={model.providers.telegram?.botToken ?? ""}
                         onchange={(e) => {
                             model.onBotTokenChange(

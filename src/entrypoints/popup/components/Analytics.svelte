@@ -42,9 +42,9 @@
 
 <Section title="Analytics" icon={ChartColumn}>
     <Collapsible
-        title="Activity Summary"
+        title="Stats"
         description={analyticsSummary}
-        defaultOpen={todayCount > bestCount}
+        defaultOpen={todayCount > 0 && todayCount === bestCount}
     >
         {#snippet children()}
             <div class="divide-y divide-white/6">

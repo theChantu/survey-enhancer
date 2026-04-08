@@ -29,7 +29,10 @@ function normalizeDailySurveyCompletions(
         24 * 60 * 60 * 1000;
     if (!stale) return { current };
 
-    const resetDaily = structuredClone(defaultSiteSettings.analytics);
+    const resetDaily = {
+        count: 0,
+        timestamp: Date.now(),
+    };
 
     const previousDailySurveyCompletions =
         analytics.dailySurveyCompletions.count > 0
@@ -41,13 +44,13 @@ function normalizeDailySurveyCompletions(
             ...current,
             analytics: {
                 ...current.analytics,
-                dailySurveyCompletions: resetDaily.dailySurveyCompletions,
+                dailySurveyCompletions: resetDaily,
                 previousDailySurveyCompletions,
             },
         },
         persistedPatch: {
             analytics: {
-                dailySurveyCompletions: resetDaily.dailySurveyCompletions,
+                dailySurveyCompletions: resetDaily,
                 previousDailySurveyCompletions,
             },
         },
