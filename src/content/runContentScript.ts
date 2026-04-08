@@ -124,9 +124,13 @@ async function runContentScript(ctx: ContentScriptContext) {
     const unsubscribeNetwork = adapter.observeNetwork();
 
     adapter.on("surveyCompletion", (data) => {
+        const dailySurveyCompletions = site.analytics.dailySurveyCompletions;
         sendExtensionMessage({
             type: "survey-completion",
-            data: { siteName: adapter.config.name, url: data.url },
+            data: {
+                siteName: adapter.config.name,
+                url: data.url,
+            },
         });
     });
 }

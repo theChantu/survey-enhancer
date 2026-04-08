@@ -1,5 +1,5 @@
 import type { EnhancementKey } from "@/enhancements/enhancementConfigs";
-import type { EventResponseMap } from "./BaseAdapter";
+import type { AdapterEventType } from "./events";
 
 export interface SiteInfo {
     name: string;
@@ -8,7 +8,8 @@ export interface SiteInfo {
     suffix?: string;
     query?: Record<string, string | number | boolean>;
     enhancements: EnhancementKey[];
-    networkPatterns: Partial<Record<keyof EventResponseMap, string>>;
+    watchedRequestTargets: string[];
+    networkPatterns: Partial<Record<AdapterEventType, string>>;
 }
 
 export const sites = {
@@ -21,6 +22,7 @@ export const sites = {
             "highlightRates",
             "newSurveyNotifications",
         ],
+        watchedRequestTargets: ["api.prolific.com/api/v1/"],
         networkPatterns: {
             surveyCompletion: "/complete",
         },
@@ -39,6 +41,7 @@ export const sites = {
             "highlightRates",
             "newSurveyNotifications",
         ],
+        watchedRequestTargets: ["connect.cloudresearch.com/participant-api"],
         networkPatterns: {
             surveyCompletion: "/submitRedirect",
         },

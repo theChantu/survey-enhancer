@@ -24,7 +24,7 @@ const defaultSiteSettings = Object.freeze({
         totalSurveyCompletions: 0,
         dailySurveyCompletions: {
             timestamp: Date.now(),
-            urls: [],
+            count: 0,
         },
     },
 } as const satisfies SiteSettings);

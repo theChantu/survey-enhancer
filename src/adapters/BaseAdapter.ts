@@ -4,6 +4,8 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
 import type { SiteInfo, SupportedHosts, sites } from "./siteConfigs";
 import { EnhancementKey } from "@/enhancements/enhancementConfigs";
+import type { NetworkRequestEvent } from "@/events/network";
+import type { AdapterEventMap, AdapterEventType } from "./events";
 
 export type AdapterConfig<H extends SupportedHosts = SupportedHosts> =
     (typeof sites)[H] &
@@ -38,19 +40,6 @@ export const DataAttr = {
     DISPLAY_SYMBOL: "data-display-symbol",
     ORIGINAL_SYMBOL: "data-original-symbol",
 } as const;
-
-export interface EventResponseMap {
-    surveyCompletion: NetworkEvent;
-    newSurvey: NetworkEvent;
-}
-
-type EventType = keyof EventResponseMap;
-
-type NetworkEvent = {
-    url: string;
-    method?: string;
-    status?: number;
-};
 
 export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
     readonly config: Readonly<AdapterConfig<H>>;
@@ -218,10 +207,12 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
 
     protected handleDomMutation(mutations: MutationRecord[]) {}
 
-    protected matchNetworkEvent(event: NetworkEvent): EventType | null {
+    protected matchNetworkEvent(
+        event: NetworkRequestEvent,
+    ): AdapterEventType | null {
         for (const [eventType, pattern] of Object.entries(
             this.config.networkPatterns,
-        ) as [EventType, string][]) {
+        ) as [AdapterEventType, string][]) {
             if (event.url.includes(pattern)) {
                 return eventType;
             }
@@ -229,9 +220,24 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return null;
     }
 
-    protected handleNetworkEvent(event: NetworkEvent) {}
+    protected buildAdapterEvent<E extends AdapterEventType>(
+        eventType: E,
+        event: NetworkRequestEvent,
+    ): AdapterEventMap[E] {
+        switch (eventType) {
+            case "surveyCompletion":
+                return {
+                    url: event.url,
+                } as AdapterEventMap[E];
+        }
+    }
 
-    private listeners = new Map<EventType, Array<(data: any) => void>>();
+    protected handleNetworkEvent(event: NetworkRequestEvent) {}
+
+    private listeners = new Map<
+        AdapterEventType,
+        Array<(data: AdapterEventMap[keyof AdapterEventMap]) => void>
+    >();
     private observerConfig: MutationObserverInit = {
         childList: true,
         subtree: true,
@@ -249,17 +255,23 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         }
     }, 100);
 
-    on<E extends EventType>(
+    on<E extends AdapterEventType>(
         event: E,
-        callback: (data: EventResponseMap[E]) => void,
+        callback: (data: AdapterEventMap[E]) => void,
     ) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, []);
         }
-        this.listeners.get(event)?.push(callback);
+        this.listeners
+            .get(event)
+            ?.push(
+                callback as (
+                    data: AdapterEventMap[keyof AdapterEventMap],
+                ) => void,
+            );
     }
 
-    emit<E extends EventType>(event: E, data: EventResponseMap[E]): void {
+    emit<E extends AdapterEventType>(event: E, data: AdapterEventMap[E]): void {
         const callbacks = this.listeners.get(event) ?? [];
         for (const callback of callbacks) {
             callback(data);
@@ -278,11 +290,15 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
 
     observeNetwork() {
         const unsubscribe = onExtensionMessage("network", (payload) => {
-            this.handleNetworkEvent({
-                url: payload.url,
-                method: payload.method,
-                status: payload.statusCode,
-            });
+            const matchedEvent = this.matchNetworkEvent(payload);
+            if (matchedEvent) {
+                this.emit(
+                    matchedEvent,
+                    this.buildAdapterEvent(matchedEvent, payload),
+                );
+            }
+
+            this.handleNetworkEvent(payload);
         });
 
         return unsubscribe;

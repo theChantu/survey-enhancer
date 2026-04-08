@@ -2,7 +2,7 @@ import { browser } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
 import { SettingsStore } from "@/store/SettingsStore";
-import { supportedSites, supportedHosts } from "@/adapters/siteConfigs";
+import { supportedSites, supportedHosts, sites } from "@/adapters/siteConfigs";
 import { getProvider, type ProviderName } from "@/providers/providers";
 import { capitalize } from "@/lib/utils";
 import { handleStoreSet } from "./handlers/handleStoreSet";
@@ -13,8 +13,11 @@ import { handleStoreFetch } from "./handlers/handleStoreFetch";
 
 function runBackgroundScript() {
     const store = new SettingsStore();
-    const filteredUrls = supportedHosts.map(
-        (host) => `https://${host}/*` as const,
+
+    const filteredUrls = supportedHosts.flatMap((host) =>
+        sites[host].watchedRequestTargets.map(
+            (target) => `https://${target}*` as const,
+        ),
     );
     const defaultNotificationIconUrl = browser.runtime.getURL("/icon-48.png");
 
@@ -224,19 +227,17 @@ function runBackgroundScript() {
     );
 
     onExtensionMessage("survey-completion", async (payload) => {
-        const { siteName, url } = payload;
+        const { siteName } = payload;
         const { analytics } = await store.sites
             .entry(siteName)
             .get(["analytics"]);
         const { totalSurveyCompletions, dailySurveyCompletions } = analytics;
 
-        if (dailySurveyCompletions.urls.includes(url)) return;
-
         await store.sites.entry(siteName).patch({
             analytics: {
                 totalSurveyCompletions: totalSurveyCompletions + 1,
                 dailySurveyCompletions: {
-                    urls: [...dailySurveyCompletions.urls, url],
+                    count: dailySurveyCompletions.count + 1,
                 },
             },
         });

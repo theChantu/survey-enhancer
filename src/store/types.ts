@@ -25,7 +25,7 @@ interface Analytics {
         totalSurveyCompletions: number;
         dailySurveyCompletions: {
             timestamp: ReturnType<typeof Date.now>;
-            urls: string[];
+            count: number;
         };
     };
 }

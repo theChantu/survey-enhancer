@@ -1,11 +1,15 @@
 import { defineConfig } from "wxt";
 import tailwindcss from "@tailwindcss/vite";
-import { supportedHosts } from "./src/adapters/siteConfigs";
+import { sites, supportedHosts } from "./src/adapters/siteConfigs";
 import { providerHostPermissions } from "./src/providers/providerHosts";
 
-const hostPermissions = supportedHosts.map(
-    (host) => `https://${host}/*` as const,
+const pageHosts = supportedHosts.map((host) => `https://${host}/*`);
+
+const watchedRequestUrls = supportedHosts.flatMap((host) =>
+    sites[host].watchedRequestTargets.map((target) => `https://${target}*`),
 );
+
+const hostPermissions = [...new Set([...pageHosts, ...watchedRequestUrls])];
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({

@@ -9,6 +9,7 @@ import type {
 } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
+import type { NetworkRequestEvent } from "@/events/network";
 
 type GlobalsTarget<TData> = {
     namespace: "globals";
@@ -69,7 +70,7 @@ interface MessageMap extends StoreMutationMessage {
     "store-fetch": StoreFetchMessage;
     "store-changed": StoreChangedMessage;
     fetch: { url: string };
-    network: { url: string; method: string; statusCode: number };
+    network: NetworkRequestEvent;
     "survey-completion": { siteName: SiteName; url: string };
 }
 

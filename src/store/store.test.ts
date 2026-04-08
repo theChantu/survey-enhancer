@@ -243,7 +243,7 @@ describe("normalization", () => {
                     totalSurveyCompletions: 5,
                     dailySurveyCompletions: {
                         timestamp: staleTimestamp,
-                        urls: ["https://example.com/survey1"],
+                        count: 1,
                     },
                 },
             },
@@ -255,14 +255,14 @@ describe("normalization", () => {
             .get(["analytics"]);
 
         expect(analytics.totalSurveyCompletions).toBe(5);
-        expect(analytics.dailySurveyCompletions.urls).toEqual([]);
+        expect(analytics.dailySurveyCompletions.count).toEqual(0);
         expect(analytics.dailySurveyCompletions.timestamp).not.toBe(
             staleTimestamp,
         );
 
         const stored = await mockStorage.getItem<any>("local:settings:sites");
-        expect(stored[siteName].analytics.dailySurveyCompletions.urls).toEqual(
-            [],
+        expect(stored[siteName].analytics.dailySurveyCompletions.count).toEqual(
+            0,
         );
         expect(stored[siteName].analytics.totalSurveyCompletions).toBe(5);
     });
