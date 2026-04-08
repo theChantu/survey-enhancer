@@ -2,7 +2,7 @@
     import Subsection from "@/components/Subsection.svelte";
     import { defaultGlobalSettings } from "@/store/defaultGlobalSettings";
     import { defaultSiteSettings } from "@/store/defaultSiteSettings";
-    import { handleQueueMutation } from "@/entrypoints/popup/handlers/handleQueueMutation";
+    import { set } from "@/entrypoints/popup/popupMutations";
     import { showActionToast } from "@/entrypoints/popup/toastStore";
 
     import type { SettingComponentProps } from "@/entrypoints/popup/types";
@@ -30,7 +30,7 @@
         const previous = structuredClone(settingsSnapshot.globals?.[key]);
         const next = structuredClone(defaultGlobalSettings[key]);
 
-        void handleQueueMutation("store-set", {
+        void set({
             namespace: "globals",
             data: { [key]: next },
         });
@@ -40,7 +40,7 @@
             actionLabel: "Undo",
             onAction: () =>
                 previous !== undefined
-                    ? handleQueueMutation("store-set", {
+                    ? set({
                           namespace: "globals",
                           data: { [key]: previous },
                       })
@@ -56,7 +56,7 @@
         );
         const next = structuredClone(defaultSiteSettings[key]);
 
-        void handleQueueMutation("store-set", {
+        void set({
             namespace: "sites",
             entry: activeSite.name,
             data: { [key]: next },
@@ -66,7 +66,7 @@
             message: `Reset ${formatKey(key)}.`,
             actionLabel: "Undo",
             onAction: () =>
-                handleQueueMutation("store-set", {
+                set({
                     namespace: "sites",
                     entry: activeSite.name,
                     data: { [key]: previous },

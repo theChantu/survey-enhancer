@@ -4,10 +4,10 @@
     import { showToast } from "@/entrypoints/popup/toastStore";
     import { capitalize } from "@/lib/utils";
 
-    import type { SettingComponentProps } from "@/entrypoints/popup/types";
+    import type { ActiveSiteState } from "@/entrypoints/popup/types";
     import type { NotificationMessage } from "@/messages/types";
 
-    let { activeSite }: SettingComponentProps = $props();
+    let { activeSite }: { activeSite: ActiveSiteState } = $props();
 
     type TestNotificationDelivery = NotificationMessage["delivery"];
 

@@ -104,7 +104,7 @@ async function runContentScript(ctx: ContentScriptContext) {
                     handleAutoReloadSettingChange(enabled);
                 }
 
-                if (minInterval !== undefined || maxInterval !== undefined) {
+                if (enabled === true && (minInterval || maxInterval)) {
                     const ms = getRandomTimeoutMs(
                         site.autoReload.minInterval,
                         site.autoReload.maxInterval,

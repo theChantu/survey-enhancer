@@ -3,16 +3,16 @@
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
 
-    import type { ToggleControlComponentProps } from "../../types";
+    import type { HighlightSettingsModel } from "../../types";
 
-    let { value, onToggle }: ToggleControlComponentProps = $props();
+    let { model }: { model: HighlightSettingsModel } = $props();
 </script>
 
 <Section title="Rate Highlights" icon={Highlighter}>
     <ToggleControl
         title="Enable Highlights"
         description="Visually emphasize stronger survey rates."
-        {value}
-        onClick={onToggle}
+        value={model.highlightRates.enabled}
+        onClick={model.onToggle}
     ></ToggleControl>
 </Section>

@@ -6,28 +6,9 @@
     import { parsePositiveInt } from "@/lib/parsePositiveInt";
     import Field from "@/components/Field.svelte";
 
-    import type { GlobalSettings } from "@/store/types";
+    import type { ProviderSettingsModel } from "../../types";
 
-    type TelegramSettings = NonNullable<
-        GlobalSettings["providers"]["telegram"]
-    >;
-
-    type ProviderSettingsProps = {
-        idleThreshold: number;
-        onIdleThresholdChange: (minutes: number) => void;
-
-        telegram: TelegramSettings;
-        onBotTokenChange: (token: string) => void;
-        onTelegramToggle: () => void;
-    };
-
-    let {
-        idleThreshold,
-        onIdleThresholdChange,
-        telegram,
-        onBotTokenChange,
-        onTelegramToggle,
-    }: ProviderSettingsProps = $props();
+    let { model }: { model: ProviderSettingsModel } = $props();
 
     const providerSetupUrl =
         "https://github.com/theChantu/survey-enhancer#provider-setup";
@@ -51,11 +32,11 @@
             min="1"
             step="1"
             class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
-            value={Math.max(1, Math.round(idleThreshold / 60))}
+            value={Math.max(1, Math.round(model.idleThreshold / 60))}
             onchange={(e) => {
                 const minutes = parsePositiveInt(e.currentTarget.value);
                 if (minutes === null) return;
-                onIdleThresholdChange(minutes);
+                model.onIdleThresholdChange(minutes);
             }}
         />
     </Field>
@@ -63,8 +44,8 @@
         <ToggleControl
             title="Telegram"
             description="Send notifications via Telegram bot when idle."
-            value={telegram.enabled}
-            onClick={onTelegramToggle}
+            value={model.providers.telegram?.enabled ?? false}
+            onClick={model.onTelegramToggle}
         >
             {#snippet children()}
                 <Field label="Bot token" id="telegram-bot-token">
@@ -72,9 +53,9 @@
                         id="telegram-bot-token"
                         type="password"
                         class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
-                        value={telegram.botToken}
+                        value={model.providers.telegram?.botToken ?? ""}
                         onchange={(e) => {
-                            onBotTokenChange(
+                            model.onBotTokenChange(
                                 (e.target as HTMLInputElement).value,
                             );
                         }}

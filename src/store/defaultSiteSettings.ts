@@ -8,9 +8,6 @@ const defaultSiteSettings = Object.freeze({
     highlightRates: {
         enabled: true,
     },
-    surveyLinks: {
-        enabled: true,
-    },
     newSurveyNotifications: {
         enabled: true,
         surveys: {},

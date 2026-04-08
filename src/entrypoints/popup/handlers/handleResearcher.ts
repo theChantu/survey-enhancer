@@ -1,4 +1,4 @@
-import { handleQueueMutation } from "./handleQueueMutation";
+import { patch } from "../popupMutations";
 
 import type { ActiveSiteState } from "../types";
 import type { NewSurveyNotificationsSettings } from "@/store/types";
@@ -18,7 +18,7 @@ export function handleAddResearcher(
         activeSite.settings.newSurveyNotifications?.[key].includes(name)
     )
         return;
-    void handleQueueMutation("store-patch", {
+    void patch({
         namespace: "sites",
         entry: activeSite.name,
         data: {
@@ -38,7 +38,7 @@ export function handleRemoveResearcher(
     name: string,
 ) {
     if (!activeSite.settings) return;
-    void handleQueueMutation("store-patch", {
+    void patch({
         namespace: "sites",
         entry: activeSite.name,
         data: {

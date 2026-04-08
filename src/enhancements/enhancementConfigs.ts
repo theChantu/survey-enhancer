@@ -2,7 +2,6 @@ import {
     ConvertCurrencyEnhancement,
     HighlightRatesEnhancement,
     NewSurveyNotificationsEnhancement,
-    SurveyLinksEnhancement,
 } from "../enhancements";
 import BaseEnhancement from "./BaseEnhancement";
 
@@ -16,7 +15,6 @@ type EnhancementConfig = {
 const enhancementKeys = [
     "currencyConversion",
     "highlightRates",
-    "surveyLinks",
     "newSurveyNotifications",
 ] as const;
 
@@ -31,10 +29,7 @@ export const enhancementConfigs = {
         enhancement: HighlightRatesEnhancement,
         priority: false,
     },
-    surveyLinks: {
-        enhancement: SurveyLinksEnhancement,
-        priority: false,
-    },
+
     newSurveyNotifications: {
         enhancement: NewSurveyNotificationsEnhancement,
         priority: false,

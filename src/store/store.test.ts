@@ -89,8 +89,8 @@ describe("globals", () => {
 describe("site", () => {
     it("returns defaults when nothing is stored", async () => {
         const store = new SettingsStore();
-        const { currencyConversion } = await store
-            .sites.entry(siteName)
+        const { currencyConversion } = await store.sites
+            .entry(siteName)
             .get(["currencyConversion"]);
 
         expect(currencyConversion.enabled).toBe(
@@ -108,8 +108,8 @@ describe("site", () => {
             currencyConversion: { selectedCurrency: "GBP" } as any,
         });
 
-        const { currencyConversion } = await store
-            .sites.entry(siteName)
+        const { currencyConversion } = await store.sites
+            .entry(siteName)
             .get(["currencyConversion"]);
         expect(currencyConversion.selectedCurrency).toBe("GBP");
     });
@@ -121,8 +121,8 @@ describe("site", () => {
             currencyConversion: { selectedCurrency: "GBP" } as any,
         });
 
-        const { currencyConversion } = await store
-            .sites.entry("cloudresearch")
+        const { currencyConversion } = await store.sites
+            .entry("cloudresearch")
             .get(["currencyConversion"]);
         expect(currencyConversion.selectedCurrency).toBe("USD");
     });
@@ -134,7 +134,7 @@ describe("site", () => {
             autoReload: { enabled: true },
         });
         await store.sites.entry("cloudresearch").patch({
-            surveyLinks: { enabled: false },
+            highlightRates: { enabled: false },
         });
 
         const stored = await mockStorage.getItem<any>("local:settings:sites");
@@ -143,7 +143,7 @@ describe("site", () => {
             autoReload: { enabled: true },
         });
         expect(stored.cloudresearch).toEqual({
-            surveyLinks: { enabled: false },
+            highlightRates: { enabled: false },
         });
     });
 
@@ -159,9 +159,9 @@ describe("site", () => {
         expect(stored.prolific.autoReload.enabled).toBe(true);
         expect(stored.cloudresearch?.autoReload).toBeUndefined();
 
-        const { autoReload } = await store.sites.entry("cloudresearch").get([
-            "autoReload",
-        ]);
+        const { autoReload } = await store.sites
+            .entry("cloudresearch")
+            .get(["autoReload"]);
         expect(autoReload.enabled).toBe(false);
     });
 
@@ -190,8 +190,8 @@ describe("site", () => {
             },
         });
 
-        const { newSurveyNotifications } = await store
-            .sites.entry(siteName)
+        const { newSurveyNotifications } = await store.sites
+            .entry(siteName)
             .get(["newSurveyNotifications"]);
 
         expect(newSurveyNotifications.surveys.surveyA).toBe(100);
@@ -250,9 +250,9 @@ describe("normalization", () => {
         });
 
         const store = new SettingsStore();
-        const { analytics } = await store.sites.entry(siteName).get([
-            "analytics",
-        ]);
+        const { analytics } = await store.sites
+            .entry(siteName)
+            .get(["analytics"]);
 
         expect(analytics.totalSurveyCompletions).toBe(5);
         expect(analytics.dailySurveyCompletions.urls).toEqual([]);

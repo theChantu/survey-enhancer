@@ -5,29 +5,24 @@
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
 
-    import type {
-        SettingComponentProps,
-        ToggleControlComponentProps,
-    } from "@/entrypoints/popup/types";
+    import type { DebugSettingsModel } from "@/entrypoints/popup/types";
 
-    let {
-        activeSite,
-        settingsState,
-        value,
-        onToggle,
-    }: ToggleControlComponentProps & SettingComponentProps = $props();
+    let { model }: { model: DebugSettingsModel } = $props();
 </script>
 
 <Section title="Developer" icon={Bug}>
     <ToggleControl
         title="Enable developer mode"
         description="Log extension activity to the browser console."
-        {value}
-        onClick={onToggle}
+        value={model.settingsState.globals.enableDebug}
+        onClick={model.onToggle}
     >
         {#snippet children()}
-            <ResetSettingsControls {activeSite} {settingsState} />
-            <NotificationTestControls {activeSite} {settingsState} />
+            <ResetSettingsControls
+                activeSite={model.activeSite}
+                settingsState={model.settingsState}
+            />
+            <NotificationTestControls activeSite={model.activeSite} />
         {/snippet}
     </ToggleControl>
 </Section>

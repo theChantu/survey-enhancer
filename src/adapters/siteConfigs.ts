@@ -20,7 +20,6 @@ export const sites = {
             "currencyConversion",
             "highlightRates",
             "newSurveyNotifications",
-            "surveyLinks",
         ],
         networkPatterns: {
             surveyCompletion: "/complete",

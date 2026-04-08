@@ -11,8 +11,6 @@ interface CurrencyConversionSettings {
 
 interface HighlightRatesSettings {}
 
-interface SurveyLinksSettings {}
-
 type researcherName = string;
 
 interface NewSurveyNotificationsSettings {
@@ -46,7 +44,6 @@ export interface EnhancementSettings {
     newSurveyNotifications: EnhancementSetting<NewSurveyNotificationsSettings>;
     currencyConversion: EnhancementSetting<CurrencyConversionSettings>;
     highlightRates: EnhancementSetting<HighlightRatesSettings>;
-    surveyLinks: EnhancementSetting<SurveyLinksSettings>;
 }
 
 type SiteSettings = EnhancementSettings & ReloadSettings & Analytics;
