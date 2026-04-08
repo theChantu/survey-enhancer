@@ -21,6 +21,7 @@
     import ProviderSettings from "./components/settings/ProviderSettings.svelte";
     import CurrencySettings from "./components/settings/CurrencySettings.svelte";
     import NotificationSettings from "./components/settings/NotificationSettings.svelte";
+    import Analytics from "./components/Analytics.svelte";
     import type { ActiveSiteState } from "./types";
 
     onMount(initPopup);
@@ -69,6 +70,7 @@
             <span>Loading settings...</span>
         </div>
     {:else}
+        <Analytics model={siteSettings.analytics} />
         {#if siteEnhancements.has("highlightRates")}
             <HighlightSettings
                 model={{

@@ -84,6 +84,17 @@ describe("globals", () => {
         expect(listener).toHaveBeenNthCalledWith(1, { enableDebug: true });
         expect(listener).toHaveBeenNthCalledWith(2, { idleThreshold: 120 });
     });
+
+    it("updates globals from current state", async () => {
+        const store = new SettingsStore();
+
+        await store.globals.update((current) => ({
+            idleThreshold: current.idleThreshold + 60,
+        }));
+
+        const { idleThreshold } = await store.globals.get(["idleThreshold"]);
+        expect(idleThreshold).toBe(defaultGlobalSettings.idleThreshold + 60);
+    });
 });
 
 describe("site", () => {
@@ -231,6 +242,33 @@ describe("site", () => {
         });
 
         expect(listener).not.toHaveBeenCalled();
+    });
+
+    it("serializes concurrent site updates", async () => {
+        const store = new SettingsStore();
+
+        await Promise.all(
+            Array.from({ length: 5 }, () =>
+                store.sites.entry(siteName).update((current) => ({
+                    analytics: {
+                        totalSurveyCompletions:
+                            current.analytics.totalSurveyCompletions + 1,
+                        dailySurveyCompletions: {
+                            count:
+                                current.analytics.dailySurveyCompletions
+                                    .count + 1,
+                        },
+                    },
+                })),
+            ),
+        );
+
+        const { analytics } = await store.sites.entry(siteName).get([
+            "analytics",
+        ]);
+
+        expect(analytics.totalSurveyCompletions).toBe(5);
+        expect(analytics.dailySurveyCompletions.count).toBe(5);
     });
 });
 

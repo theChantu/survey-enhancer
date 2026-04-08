@@ -228,18 +228,24 @@ function runBackgroundScript() {
 
     onExtensionMessage("survey-completion", async (payload) => {
         const { siteName } = payload;
-        const { analytics } = await store.sites
-            .entry(siteName)
-            .get(["analytics"]);
-        const { totalSurveyCompletions, dailySurveyCompletions } = analytics;
 
-        await store.sites.entry(siteName).patch({
-            analytics: {
-                totalSurveyCompletions: totalSurveyCompletions + 1,
-                dailySurveyCompletions: {
-                    count: dailySurveyCompletions.count + 1,
+        await store.sites.entry(siteName).update((current) => {
+            const nextDailyCount =
+                current.analytics.dailySurveyCompletions.count + 1;
+
+            return {
+                analytics: {
+                    totalSurveyCompletions:
+                        current.analytics.totalSurveyCompletions + 1,
+                    bestDailySurveyCompletions: Math.max(
+                        current.analytics.bestDailySurveyCompletions,
+                        nextDailyCount,
+                    ),
+                    dailySurveyCompletions: {
+                        count: nextDailyCount,
+                    },
                 },
-            },
+            };
         });
     });
 }

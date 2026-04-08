@@ -23,6 +23,8 @@ interface NewSurveyNotificationsSettings {
 interface Analytics {
     analytics: {
         totalSurveyCompletions: number;
+        bestDailySurveyCompletions: number;
+        previousDailySurveyCompletions: number;
         dailySurveyCompletions: {
             timestamp: ReturnType<typeof Date.now>;
             count: number;

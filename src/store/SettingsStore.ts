@@ -20,6 +20,9 @@ type StorePick<T extends object, K extends readonly (keyof T)[]> = Pick<
 >;
 
 type StoreChange<T extends object> = Partial<T> | DeepPartial<T>;
+type StoreUpdater<T extends object> = (
+    current: T,
+) => StoreChange<T> | Promise<StoreChange<T>>;
 type StoreListener<T extends object> = (change: StoreChange<T>) => void;
 type StoreUnsubscribe = () => void;
 type StoreNormalizer<T extends object> = (current: T) => {
@@ -41,6 +44,7 @@ export interface StoreNode<T extends object> {
     get<K extends readonly (keyof T)[]>(keys: K): Promise<StorePick<T, K>>;
     set(values: Partial<T>): Promise<Partial<T>>;
     patch(patch: DeepPartial<T>): Promise<Partial<T>>;
+    update(updater: StoreUpdater<T>): Promise<Partial<T>>;
     subscribe(listener: StoreListener<T>): StoreUnsubscribe;
 }
 
@@ -117,6 +121,17 @@ function getEntryChange<TKey extends string, TValue extends object>(
     ];
 }
 
+function wrapEntryChange<TKey extends string, TValue extends object>(
+    name: TKey,
+    changed: CollectionEntryChange<TValue>,
+): DeepPartial<Record<TKey, TValue>> {
+    return {
+        [name]: changed,
+    } as Partial<Record<TKey, CollectionEntryChange<TValue>>> as DeepPartial<
+        Record<TKey, TValue>
+    >;
+}
+
 function createStorageKey(namespace: NamespaceName): StorageKey {
     return `local:settings:${namespace}`;
 }
@@ -176,6 +191,7 @@ export class SettingsStore implements Store {
         config: NamespaceConfig<T>,
     ): StoreNode<T> {
         const listeners = new Set<StoreListener<T>>();
+        let pendingWrite = Promise.resolve();
 
         const hydrate = async (
             stored: DeepPartial<T>,
@@ -231,16 +247,33 @@ export class SettingsStore implements Store {
             }
         };
 
-        const commit = async (
+        const runSerializedWrite = async <TResult>(
+            work: () => Promise<TResult>,
+        ): Promise<TResult> => {
+            const previous = pendingWrite;
+            let release!: () => void;
+
+            pendingWrite = new Promise<void>((resolve) => {
+                release = resolve;
+            });
+
+            await previous;
+
+            try {
+                return await work();
+            } finally {
+                release();
+            }
+        };
+
+        const commitStoredChange = async (
+            stored: DeepPartial<T>,
             raw: StoreChange<T>,
             mode: "set" | "patch",
         ): Promise<Partial<T>> => {
             const changed = stripUndefined(raw) as StoreChange<T>;
             if (isEmptyChange(changed)) return {};
 
-            const stored =
-                (await storage.getItem<DeepPartial<T>>(config.storageKey)) ??
-                ({} as DeepPartial<T>);
             const nextStored = buildNextStored(stored, changed, mode);
 
             await storage.setItem(config.storageKey, nextStored);
@@ -250,6 +283,19 @@ export class SettingsStore implements Store {
             return resolveChanged(current, changed);
         };
 
+        const commit = async (
+            raw: StoreChange<T>,
+            mode: "set" | "patch",
+        ): Promise<Partial<T>> =>
+            await runSerializedWrite(async () => {
+                const stored =
+                    (await storage.getItem<DeepPartial<T>>(
+                        config.storageKey,
+                    )) ?? ({} as DeepPartial<T>);
+
+                return await commitStoredChange(stored, raw, mode);
+            });
+
         return {
             get: async (keys) => {
                 const { current } = await load();
@@ -257,6 +303,13 @@ export class SettingsStore implements Store {
             },
             set: async (values) => await commit(values, "set"),
             patch: async (patch) => await commit(patch, "patch"),
+            update: async (updater) =>
+                await runSerializedWrite(async () => {
+                    const { current, stored } = await load();
+                    const changed = await updater(current);
+
+                    return await commitStoredChange(stored, changed, "patch");
+                }),
             subscribe: (listener) => {
                 listeners.add(listener);
                 return () => listeners.delete(listener);
@@ -291,6 +344,13 @@ export class SettingsStore implements Store {
                     const changed = await parent.patch({
                         [name]: patch,
                     } as DeepPartial<Record<TKey, TValue>>);
+
+                    return (changed[name] ?? {}) as Partial<TValue>;
+                },
+                update: async (updater) => {
+                    const changed = await parent.update(async (current) =>
+                        wrapEntryChange(name, await updater(current[name])),
+                    );
 
                     return (changed[name] ?? {}) as Partial<TValue>;
                 },

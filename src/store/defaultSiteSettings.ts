@@ -22,6 +22,8 @@ const defaultSiteSettings = Object.freeze({
     },
     analytics: {
         totalSurveyCompletions: 0,
+        bestDailySurveyCompletions: 0,
+        previousDailySurveyCompletions: 0,
         dailySurveyCompletions: {
             timestamp: Date.now(),
             count: 0,

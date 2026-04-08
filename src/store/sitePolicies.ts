@@ -23,25 +23,32 @@ function mergePersistedPatch<T extends object>(
 function normalizeDailySurveyCompletions(
     current: SiteSettings,
 ): SiteNormalizationResult {
-    const daily = current.analytics.dailySurveyCompletions;
-    const stale = Date.now() - daily.timestamp > 24 * 60 * 60 * 1000;
+    const analytics = current.analytics;
+    const stale =
+        Date.now() - analytics.dailySurveyCompletions.timestamp >
+        24 * 60 * 60 * 1000;
     if (!stale) return { current };
 
-    const resetDaily = structuredClone(
-        defaultSiteSettings.analytics.dailySurveyCompletions,
-    );
+    const resetDaily = structuredClone(defaultSiteSettings.analytics);
+
+    const previousDailySurveyCompletions =
+        analytics.dailySurveyCompletions.count > 0
+            ? analytics.dailySurveyCompletions.count
+            : analytics.previousDailySurveyCompletions;
 
     return {
         current: {
             ...current,
             analytics: {
                 ...current.analytics,
-                dailySurveyCompletions: resetDaily,
+                dailySurveyCompletions: resetDaily.dailySurveyCompletions,
+                previousDailySurveyCompletions,
             },
         },
         persistedPatch: {
             analytics: {
-                dailySurveyCompletions: resetDaily,
+                dailySurveyCompletions: resetDaily.dailySurveyCompletions,
+                previousDailySurveyCompletions,
             },
         },
     };

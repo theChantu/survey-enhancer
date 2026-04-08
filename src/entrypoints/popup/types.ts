@@ -58,3 +58,5 @@ export type AutoReloadSettingsModel = ToggleControlComponentProps & {
 
 export type DebugSettingsModel = ToggleControlComponentProps &
     SettingComponentProps;
+
+export type AnalyticsModel = SiteSettings["analytics"];
