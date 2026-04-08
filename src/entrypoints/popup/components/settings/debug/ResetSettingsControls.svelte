@@ -24,10 +24,9 @@
         return key.replace(/([A-Z])/g, " $1").toLowerCase();
     }
 
-    const settingsSnapshot = $derived($state.snapshot(settingsState));
-
     function handleResetGlobalKey(key: GlobalResetKey) {
-        const previous = structuredClone(settingsSnapshot.globals?.[key]);
+        const snapshot = $state.snapshot(settingsState);
+        const previous = structuredClone(snapshot.globals?.[key]);
         const next = structuredClone(defaultGlobalSettings[key]);
 
         void set({
@@ -49,11 +48,10 @@
     }
 
     function handleResetSiteKey(key: SiteResetKey) {
-        if (!settingsState.sites[activeSite.url]?.[key]) return;
+        const snapshot = $state.snapshot(settingsState);
+        if (!snapshot.sites[activeSite.url]?.[key]) return;
 
-        const previous = structuredClone(
-            settingsSnapshot.sites[activeSite.url]?.[key],
-        );
+        const previous = structuredClone(snapshot.sites[activeSite.url]?.[key]);
         const next = structuredClone(defaultSiteSettings[key]);
 
         void set({
@@ -76,13 +74,13 @@
 </script>
 
 <Subsection className="flex flex-col gap-2" borderClass="border-white/4">
-    <span class="text-[0.78rem] font-medium text-gray-500"
+    <span class="text-[0.78rem] font-medium text-gray-400"
         >Reset to default</span
     >
     <div class="flex flex-wrap gap-1">
         {#each resettableGlobalKeys as key}
             <button
-                class="py-1 px-2 rounded border border-white/8 bg-white/4 text-gray-300 text-[0.72rem] font-[inherit] cursor-pointer hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300"
+                class="popup-compact-button popup-compact-button-danger"
                 onclick={() => handleResetGlobalKey(key)}
             >
                 {formatKey(key)}
@@ -90,7 +88,7 @@
         {/each}
         {#each resettableSiteKeys as key}
             <button
-                class="py-1 px-2 rounded border border-white/8 bg-white/4 text-gray-300 text-[0.72rem] font-[inherit] cursor-pointer hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300"
+                class="popup-compact-button popup-compact-button-danger"
                 onclick={() => handleResetSiteKey(key)}
             >
                 {formatKey(key)}

@@ -10,10 +10,10 @@
     let { model }: { model: AutoReloadSettingsModel } = $props();
 </script>
 
-<Section title="Auto reload" icon={RefreshCw}>
+<Section title="Auto Reload" icon={RefreshCw}>
     <ToggleControl
         title="Auto reload"
-        description="Periodically refresh the page in the background to check for new studies."
+        description="Refresh the page in the background to look for new studies."
         value={model.autoReload.enabled}
         onClick={model.onToggle}
     >
@@ -24,7 +24,7 @@
                     type="number"
                     min="1"
                     step="1"
-                    class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
+                    class="popup-control box-border"
                     value={model.autoReload.minInterval}
                     onchange={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);
@@ -39,7 +39,7 @@
                     type="number"
                     min="1"
                     step="1"
-                    class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
+                    class="popup-control box-border"
                     value={model.autoReload.maxInterval}
                     onchange={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);

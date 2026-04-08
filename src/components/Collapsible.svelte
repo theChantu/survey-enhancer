@@ -33,26 +33,24 @@
     }
 </script>
 
-<div class="rounded-md border border-white/8 bg-white/4 overflow-hidden">
+<div class="popup-surface overflow-hidden">
     <button
-        class="w-full flex items-start justify-between gap-3 px-3 py-2.5 text-left font-[inherit] bg-transparent border-none cursor-pointer transition-colors duration-150 hover:bg-white/4"
+        class="flex w-full cursor-pointer items-start justify-between gap-3 border-none bg-transparent px-3 py-2.5 text-left font-[inherit] transition-colors duration-150 hover:bg-white/4"
         type="button"
         onclick={toggle}
         aria-expanded={open}
     >
         <div class="min-w-0">
-            <div class="text-[0.82rem] font-medium text-gray-200 leading-tight">
+            <div class="text-[0.82rem] font-medium leading-tight text-gray-100">
                 {title}
             </div>
             {#if description}
-                <div class="mt-0.5 text-[0.72rem] leading-snug text-gray-500">
+                <div class="mt-0.5 text-[0.72rem] leading-snug text-gray-400">
                     {description}
                 </div>
             {/if}
         </div>
-        <div
-            class={`mt-0.5 shrink-0 rounded-full border border-white/8 bg-white/4 p-1 text-gray-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        >
+        <div class={`popup-chip-chevron mt-0.5 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
             <ChevronDown size={12} strokeWidth={2.4} />
         </div>
     </button>

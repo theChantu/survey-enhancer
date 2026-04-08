@@ -85,6 +85,22 @@ type NamespaceStoreMap = {
     sites: SitesStore;
 };
 
+type StoreWriteMode = "set" | "patch";
+
+type WriteOperation<T extends object> = {
+    persistedChange: StoreChange<T>;
+    notifiedChange?: StoreChange<T>;
+    mode: StoreWriteMode;
+};
+
+interface InternalStoreNode<T extends object> extends StoreNode<T> {
+    applyWrite(
+        buildOperation: (
+            current: T,
+        ) => WriteOperation<T> | Promise<WriteOperation<T>>,
+    ): Promise<Partial<T>>;
+}
+
 export interface Store {
     readonly globals: GlobalsStore;
     readonly sites: SitesStore;
@@ -163,7 +179,7 @@ const namespaceConfigs = {
 function buildNextStored<T extends object>(
     stored: DeepPartial<T>,
     changed: StoreChange<T>,
-    mode: "set" | "patch",
+    mode: StoreWriteMode,
 ): DeepPartial<T> {
     return mode === "set"
         ? ({ ...stored, ...changed } as DeepPartial<T>)
@@ -189,7 +205,7 @@ export class SettingsStore implements Store {
 
     private createStore<T extends object>(
         config: NamespaceConfig<T>,
-    ): StoreNode<T> {
+    ): InternalStoreNode<T> {
         const listeners = new Set<StoreListener<T>>();
         let pendingWrite = Promise.resolve();
 
@@ -268,32 +284,42 @@ export class SettingsStore implements Store {
 
         const commitStoredChange = async (
             stored: DeepPartial<T>,
-            raw: StoreChange<T>,
-            mode: "set" | "patch",
+            rawPersistedChange: StoreChange<T>,
+            mode: StoreWriteMode,
+            rawNotifiedChange: StoreChange<T> = rawPersistedChange,
         ): Promise<Partial<T>> => {
-            const changed = stripUndefined(raw) as StoreChange<T>;
-            if (isEmptyChange(changed)) return {};
+            const persistedChange = stripUndefined(
+                rawPersistedChange,
+            ) as StoreChange<T>;
+            const notifiedChange = stripUndefined(
+                rawNotifiedChange,
+            ) as StoreChange<T>;
+            if (isEmptyChange(persistedChange)) return {};
 
-            const nextStored = buildNextStored(stored, changed, mode);
+            const nextStored = buildNextStored(stored, persistedChange, mode);
 
             await storage.setItem(config.storageKey, nextStored);
-            notify(changed);
+            notify(notifiedChange);
 
             const { current } = await hydrate(nextStored);
-            return resolveChanged(current, changed);
+            return resolveChanged(current, notifiedChange);
         };
 
-        const commit = async (
-            raw: StoreChange<T>,
-            mode: "set" | "patch",
+        const applyWrite = async (
+            buildOperation: (
+                current: T,
+            ) => WriteOperation<T> | Promise<WriteOperation<T>>,
         ): Promise<Partial<T>> =>
             await runSerializedWrite(async () => {
-                const stored =
-                    (await storage.getItem<DeepPartial<T>>(
-                        config.storageKey,
-                    )) ?? ({} as DeepPartial<T>);
+                const { current, stored } = await load();
+                const operation = await buildOperation(current);
 
-                return await commitStoredChange(stored, raw, mode);
+                return await commitStoredChange(
+                    stored,
+                    operation.persistedChange,
+                    operation.mode,
+                    operation.notifiedChange,
+                );
             });
 
         return {
@@ -301,15 +327,22 @@ export class SettingsStore implements Store {
                 const { current } = await load();
                 return pick(current, keys);
             },
-            set: async (values) => await commit(values, "set"),
-            patch: async (patch) => await commit(patch, "patch"),
+            set: async (values) =>
+                await applyWrite(async () => ({
+                    persistedChange: values,
+                    mode: "set",
+                })),
+            patch: async (patch) =>
+                await applyWrite(async () => ({
+                    persistedChange: patch,
+                    mode: "patch",
+                })),
             update: async (updater) =>
-                await runSerializedWrite(async () => {
-                    const { current, stored } = await load();
-                    const changed = await updater(current);
-
-                    return await commitStoredChange(stored, changed, "patch");
-                }),
+                await applyWrite(async (current) => ({
+                    persistedChange: await updater(current),
+                    mode: "patch",
+                })),
+            applyWrite,
             subscribe: (listener) => {
                 listeners.add(listener);
                 return () => listeners.delete(listener);
@@ -318,7 +351,7 @@ export class SettingsStore implements Store {
     }
 
     private createCollectionStore<TKey extends string, TValue extends object>(
-        parent: StoreNode<Record<TKey, TValue>>,
+        parent: InternalStoreNode<Record<TKey, TValue>>,
     ): CollectionStore<TKey, TValue> {
         const entries = new Map<TKey, StoreNode<TValue>>();
 
@@ -334,9 +367,20 @@ export class SettingsStore implements Store {
                     return pick(selected[name], keys);
                 },
                 set: async (values) => {
-                    const changed = await parent.set({
-                        [name]: values,
-                    } as Partial<Record<TKey, TValue>>);
+                    const changed = await parent.applyWrite(
+                        async (current) => ({
+                            persistedChange: {
+                                [name]: {
+                                    ...current[name],
+                                    ...values,
+                                },
+                            } as Partial<Record<TKey, TValue>>,
+                            notifiedChange: {
+                                [name]: values,
+                            } as Partial<Record<TKey, TValue>>,
+                            mode: "set",
+                        }),
+                    );
 
                     return (changed[name] ?? {}) as Partial<TValue>;
                 },

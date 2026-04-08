@@ -9,7 +9,13 @@ const watchedRequestUrls = supportedHosts.flatMap((host) =>
     sites[host].watchedRequestTargets.map((target) => `https://${target}*`),
 );
 
-const hostPermissions = [...new Set([...pageHosts, ...watchedRequestUrls])];
+const hostPermissions = [
+    ...new Set([
+        ...pageHosts,
+        ...watchedRequestUrls,
+        ...providerHostPermissions,
+    ]),
+];
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -20,7 +26,11 @@ export default defineConfig({
         plugins: [tailwindcss()],
     }),
     manifest: {
-        host_permissions: [...hostPermissions, ...providerHostPermissions],
+        name: "Survey Enhancer",
+        short_name: "Survey Enhancer",
+        description:
+            "Get alerts, highlight better-paying studies, convert rewards, and track activity across supported survey sites.",
+        host_permissions: hostPermissions,
         permissions: ["storage", "notifications", "tabs", "webRequest", "idle"],
 
         browser_specific_settings: {

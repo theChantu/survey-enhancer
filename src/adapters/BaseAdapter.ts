@@ -5,7 +5,11 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import type { SiteInfo, SupportedHosts, sites } from "./siteConfigs";
 import { EnhancementKey } from "@/enhancements/enhancementConfigs";
 import type { NetworkRequestEvent } from "@/events/network";
-import type { AdapterEventMap, AdapterEventType } from "./events";
+import type {
+    AdapterEventMap,
+    AdapterEventType,
+    NetworkEventMatcher,
+} from "./events";
 
 export type AdapterConfig<H extends SupportedHosts = SupportedHosts> =
     (typeof sites)[H] &
@@ -210,13 +214,20 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
     protected matchNetworkEvent(
         event: NetworkRequestEvent,
     ): AdapterEventType | null {
-        for (const [eventType, pattern] of Object.entries(
+        for (const [eventType, matchers] of Object.entries(
             this.config.networkPatterns,
-        ) as [AdapterEventType, string][]) {
-            if (event.url.includes(pattern)) {
+        ) as [AdapterEventType, NetworkEventMatcher[]][]) {
+            const matched = matchers.some(
+                (matcher) =>
+                    event.url.includes(matcher.path) &&
+                    (!matcher.method || event.method === matcher.method),
+            );
+
+            if (matched) {
                 return eventType;
             }
         }
+
         return null;
     }
 

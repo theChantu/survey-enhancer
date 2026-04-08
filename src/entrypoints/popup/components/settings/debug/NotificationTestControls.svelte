@@ -56,17 +56,17 @@
 
 <Subsection className="flex flex-col gap-2" borderClass="border-white/4">
     <div class="flex flex-col gap-0.5">
-        <span class="text-[0.78rem] font-medium text-gray-300"
+        <span class="text-[0.78rem] font-medium text-gray-400"
             >Test notifications</span
         >
         <span class="text-[0.72rem] text-gray-500">
-            Send a sample notification to verify routing and provider setup.
+            Send a sample alert to check delivery and provider setup.
         </span>
     </div>
     <div class="grid grid-cols-3 gap-1.5">
         {#each testNotificationModes as mode}
             <button
-                class="py-1.5 px-2 rounded border border-white/10 bg-white/4 text-gray-200 text-[0.72rem] font-medium font-[inherit] cursor-pointer hover:bg-white/8 hover:border-white/20"
+                class="popup-compact-button"
                 onclick={() => handleTestNotification(mode)}
             >
                 {capitalize(mode)}

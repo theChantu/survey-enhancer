@@ -23,7 +23,7 @@ function runBackgroundScript() {
 
     browser.webRequest.onCompleted.addListener(
         (details) => {
-            if (!details.tabId || details.tabId < 0) return;
+            if (details.tabId < 0) return;
 
             sendTabMessage(details.tabId, {
                 type: "network",

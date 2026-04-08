@@ -14,15 +14,15 @@
         "https://github.com/theChantu/survey-enhancer#provider-setup";
 </script>
 
-<Section title="Providers" icon={Send}>
-    <div class="mb-2 text-[0.74rem] text-gray-500">
-        Need help with bot setup?
+<Section title="Delivery" icon={Send}>
+    <div class="mb-2 text-[0.74rem] text-gray-400">
+        Need help getting Telegram set up?
         <a
             href={providerSetupUrl}
             target="_blank"
             rel="noopener noreferrer"
-            class="ml-1 text-indigo-300 hover:text-indigo-200"
-            >View setup guide</a
+            class="popup-inline-link ml-1"
+            >Open the setup guide</a
         >
     </div>
     <Field label="Idle threshold (minutes)" id="idle-threshold">
@@ -31,7 +31,7 @@
             type="number"
             min="1"
             step="1"
-            class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
+            class="popup-control box-border"
             value={Math.max(1, Math.round(model.idleThreshold / 60))}
             onchange={(e) => {
                 const minutes = parsePositiveInt(e.currentTarget.value);
@@ -42,8 +42,8 @@
     </Field>
     <Subsection withDivider={false}>
         <ToggleControl
-            title="Telegram"
-            description="Send notifications via Telegram bot when idle."
+            title="Telegram alerts"
+            description="Send alerts through Telegram when you are idle."
             value={model.providers.telegram?.enabled ?? false}
             onClick={model.onTelegramToggle}
         >
@@ -52,7 +52,7 @@
                     <input
                         id="telegram-bot-token"
                         type="password"
-                        class="w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none box-border transition-colors duration-150 hover:bg-white/5 focus:border-white/18"
+                        class="popup-control box-border"
                         value={model.providers.telegram?.botToken ?? ""}
                         onchange={(e) => {
                             model.onBotTokenChange(

@@ -125,6 +125,32 @@ describe("site", () => {
         expect(currencyConversion.selectedCurrency).toBe("GBP");
     });
 
+    it("replaces only the targeted top-level site keys on set", async () => {
+        const store = new SettingsStore();
+
+        await store.sites.entry(siteName).patch({
+            autoReload: { enabled: true },
+            newSurveyNotifications: {
+                surveys: {
+                    surveyA: 100,
+                },
+            },
+        });
+
+        await store.sites.entry(siteName).set({
+            newSurveyNotifications: defaultSiteSettings.newSurveyNotifications,
+        });
+
+        const { autoReload, newSurveyNotifications } = await store.sites
+            .entry(siteName)
+            .get(["autoReload", "newSurveyNotifications"]);
+
+        expect(autoReload.enabled).toBe(true);
+        expect(newSurveyNotifications).toEqual(
+            defaultSiteSettings.newSurveyNotifications,
+        );
+    });
+
     it("isolates sites from each other", async () => {
         const store = new SettingsStore();
 

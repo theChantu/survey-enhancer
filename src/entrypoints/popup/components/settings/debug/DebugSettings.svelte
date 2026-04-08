@@ -10,10 +10,10 @@
     let { model }: { model: DebugSettingsModel } = $props();
 </script>
 
-<Section title="Developer" icon={Bug}>
+<Section title="Developer" icon={Bug} tone="muted">
     <ToggleControl
         title="Developer mode"
-        description="Log extension activity to the browser console."
+        description="Show extension activity in the browser console."
         value={model.settingsState.globals.enableDebug}
         onClick={model.onToggle}
     >

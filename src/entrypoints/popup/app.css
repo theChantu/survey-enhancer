@@ -6,6 +6,52 @@
     --scrollbar-thumb-hover: rgba(148, 163, 184, 0.7);
 }
 
+@layer components {
+    .popup-surface {
+        @apply rounded-md border border-white/8 bg-white/4;
+    }
+
+    .popup-control {
+        @apply w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-white/18;
+    }
+
+    .popup-select-control {
+        @apply w-full appearance-none cursor-pointer rounded-md border border-white/8 bg-white/4 px-3 py-2.5 pr-11 text-[0.82rem] font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-white/18;
+    }
+
+    .popup-control-chevron {
+        @apply absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rounded-full border border-white/8 bg-white/4 p-1 text-gray-500;
+    }
+
+    .popup-chip-chevron {
+        @apply rounded-full border border-white/8 bg-white/4 p-1 text-gray-500;
+    }
+
+    .popup-section-heading {
+        @apply mb-2 flex items-center gap-1.5 text-[0.76rem] font-medium tracking-[0.04em] text-gray-300;
+    }
+
+    .popup-section-heading-muted {
+        @apply text-gray-500;
+    }
+
+    .popup-compact-button {
+        @apply cursor-pointer rounded-md border border-white/10 bg-white/4 px-2.5 py-1.5 text-[0.72rem] font-medium font-[inherit] text-gray-200 transition-colors duration-150 hover:bg-white/7 hover:border-white/18;
+    }
+
+    .popup-compact-button-danger {
+        @apply text-gray-300 hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300;
+    }
+
+    .popup-inline-link {
+        @apply text-indigo-300 transition-colors duration-150 hover:text-indigo-200;
+    }
+
+    .popup-analytics-accent {
+        @apply text-indigo-200;
+    }
+}
+
 body {
     margin: 0;
     min-width: 340px;

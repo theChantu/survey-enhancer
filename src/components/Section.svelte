@@ -3,12 +3,11 @@
 
     export let title: string;
     export let icon: Component<{ size: number; strokeWidth: number }>;
+    export let tone: "default" | "muted" = "default";
 </script>
 
 <div class="border-t border-white/6 pt-3">
-    <h2
-        class="flex items-center gap-1.5 mb-2 text-[0.7rem] font-semibold text-gray-500 uppercase tracking-wide"
-    >
+    <h2 class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""}`}>
         <svelte:component this={icon} size={14} strokeWidth={2.5} />
         {title}
     </h2>

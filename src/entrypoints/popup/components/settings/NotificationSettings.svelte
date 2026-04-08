@@ -13,7 +13,7 @@
 <Section title="Alerts" icon={Bell}>
     <ToggleControl
         title="New survey alerts"
-        description="Send a desktop notification when a new survey appears."
+        description="Get notified when a new survey shows up."
         value={model.newSurveyNotifications.enabled}
         onClick={model.onToggle}
     >

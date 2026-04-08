@@ -11,7 +11,7 @@
 <Section title="Highlights" icon={Highlighter}>
     <ToggleControl
         title="Rate highlights"
-        description="Visually emphasize stronger survey rates."
+        description="Make stronger survey rates easier to spot."
         value={model.highlightRates.enabled}
         onClick={model.onToggle}
     ></ToggleControl>

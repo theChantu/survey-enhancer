@@ -10,6 +10,7 @@
     const todayCount = $derived(model.dailySurveyCompletions.count);
     const bestCount = $derived(model.bestDailySurveyCompletions);
     const previousCount = $derived(model.previousDailySurveyCompletions);
+    const matchingBestDay = $derived(todayCount > 0 && todayCount === bestCount);
 
     function pluralize(count: number, noun: string) {
         return `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -40,19 +41,19 @@
     });
 </script>
 
-<Section title="Analytics" icon={ChartColumn}>
+<Section title="Stats" icon={ChartColumn}>
     <Collapsible
-        title="Stats"
+        title="Today's progress"
         description={analyticsSummary}
-        defaultOpen={todayCount > 0 && todayCount === bestCount}
+        defaultOpen={matchingBestDay}
     >
         {#snippet children()}
             <div class="divide-y divide-white/6">
                 <div class="flex items-center justify-between py-2">
-                    <span class="text-[0.78rem] text-gray-400"
+                    <span class={`text-[0.78rem] ${matchingBestDay ? "popup-analytics-accent" : "text-gray-400"}`}
                         >Completed today</span
                     >
-                    <span class="text-[1.05rem] font-semibold text-gray-100">
+                    <span class={`text-[1.05rem] font-semibold ${matchingBestDay ? "popup-analytics-accent" : "text-gray-100"}`}>
                         {todayCount}
                     </span>
                 </div>
