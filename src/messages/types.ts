@@ -8,6 +8,7 @@ import type {
     GlobalSettingsChange,
 } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
+import type { SurveyInfo } from "@/adapters/BaseAdapter";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 import type { NetworkRequestEvent } from "@/events/network";
 
@@ -65,10 +66,39 @@ export type NotificationMessage = {
     delivery?: "auto" | "provider" | "browser";
 };
 
+export type RuntimeDataMap = {
+    studies: SurveyInfo[];
+};
+
+export type RuntimeChannel = keyof RuntimeDataMap;
+
+type RuntimeTarget<K extends RuntimeChannel = RuntimeChannel> = {
+    channel: K;
+    siteName: SiteName;
+    data: RuntimeDataMap[K];
+};
+
+export type RuntimeSyncMessage<K extends RuntimeChannel = RuntimeChannel> =
+    RuntimeTarget<K>;
+
+export type RuntimeChangedMessage<K extends RuntimeChannel = RuntimeChannel> =
+    RuntimeTarget<K>;
+
+export type RuntimeFetchMessage<K extends RuntimeChannel = RuntimeChannel> = {
+    channel: K;
+    siteName: SiteName;
+};
+
+export type RuntimeFetchResponse<K extends RuntimeChannel = RuntimeChannel> =
+    RuntimeTarget<K> | null;
+
 interface MessageMap extends StoreMutationMessage {
     notification: NotificationMessage;
     "store-fetch": StoreFetchMessage;
     "store-changed": StoreChangedMessage;
+    "runtime-sync": RuntimeSyncMessage;
+    "runtime-fetch": RuntimeFetchMessage;
+    "runtime-changed": RuntimeChangedMessage;
     fetch: { url: string };
     network: NetworkRequestEvent;
     "survey-completion": { siteName: SiteName; url: string };
@@ -80,6 +110,9 @@ interface ResponseMap {
     "store-set": StoreSetResponse;
     "store-patch": StorePatchResponse;
     "store-changed": void;
+    "runtime-sync": void;
+    "runtime-fetch": RuntimeFetchResponse;
+    "runtime-changed": void;
     fetch: unknown;
     network: void;
     "survey-completion": void;

@@ -26,10 +26,25 @@ async function runContentScript(ctx: ContentScriptContext) {
         ...site,
     });
 
-    async function safelyRunEnhancements() {
+    async function syncRuntime() {
+        await sendExtensionMessage({
+            type: "runtime-sync",
+            data: {
+                channel: "studies",
+                siteName: adapter.config.name,
+                data: adapter.extractSurveys(),
+            },
+        });
+    }
+
+    async function runEnhancements(changed?: StoreChangedMessage["data"]) {
         observer.disconnect();
         try {
+            if (changed) {
+                await enhancementHandler.update(changed);
+            }
             await enhancementHandler.run();
+            await syncRuntime();
         } finally {
             observer.observe(document.body, observerConfig);
         }
@@ -37,15 +52,7 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     const debounced = debounce(
         async (changed?: StoreChangedMessage["data"]) => {
-            observer.disconnect();
-            try {
-                if (changed) {
-                    enhancementHandler.update(changed);
-                }
-                await enhancementHandler.run();
-            } finally {
-                observer.observe(document.body, observerConfig);
-            }
+            await runEnhancements(changed);
         },
         300,
     );
@@ -61,7 +68,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     });
 
     // Apply the enhancements initially
-    await safelyRunEnhancements();
+    await runEnhancements();
 
     const { minInterval, maxInterval } = site.autoReload;
 
@@ -121,7 +128,7 @@ async function runContentScript(ctx: ContentScriptContext) {
         debounced(payload.data);
     });
 
-    const unsubscribeNetwork = adapter.observeNetwork();
+    const unsubscribe = adapter.observeNetwork();
 
     adapter.on("surveyCompletion", (data) => {
         const dailySurveyCompletions = site.analytics.dailySurveyCompletions;

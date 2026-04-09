@@ -1,10 +1,20 @@
 import type { GlobalSettings, SiteSettings } from "@/store/types";
 import type { SiteName, SupportedHosts } from "@/adapters/siteConfigs";
-import type { MessageMap, StoreMutationMessageType } from "@/messages/types";
+import type {
+    MessageMap,
+    RuntimeDataMap,
+    StoreMutationMessageType,
+} from "@/messages/types";
 
 export type SettingsState = {
     globals: GlobalSettings;
     sites: Partial<Record<SupportedHosts, SiteSettings>>;
+};
+
+export type RuntimeState = {
+    [K in keyof RuntimeDataMap]: Partial<
+        Record<SupportedHosts, RuntimeDataMap[K] | null>
+    >;
 };
 
 export type ActiveSiteState = {

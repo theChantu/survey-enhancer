@@ -11,13 +11,21 @@ interface CurrencyConversionSettings {
 
 interface HighlightRatesSettings {}
 
-type researcherName = string;
+type NotificationSound = "alert" | "bloop" | "chime";
 
 interface NewSurveyNotificationsSettings {
     surveys: Record<string, ReturnType<typeof Date.now>>;
-    cachedResearchers: Record<researcherName, ReturnType<typeof Date.now>>;
-    excludedResearchers: researcherName[];
-    includedResearchers: researcherName[];
+    cachedResearchers: Record<string, ReturnType<typeof Date.now>>;
+    excludedResearchers: string[];
+    includedResearchers: string[];
+    delivery: {
+        browser: boolean;
+        sound: {
+            enabled: boolean;
+            type: NotificationSound;
+            volume: number;
+        };
+    };
 }
 
 interface Analytics {
@@ -94,4 +102,5 @@ export type {
     GlobalSettings,
     SiteSettings,
     NewSurveyNotificationsSettings,
+    NotificationSound,
 };

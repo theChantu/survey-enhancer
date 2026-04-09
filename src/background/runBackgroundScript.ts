@@ -2,7 +2,12 @@ import { browser } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
 import { SettingsStore } from "@/store/SettingsStore";
-import { supportedSites, supportedHosts, sites } from "@/adapters/siteConfigs";
+import {
+    supportedSites,
+    supportedHosts,
+    sites,
+    type SiteName,
+} from "@/adapters/siteConfigs";
 import { getProvider, type ProviderName } from "@/providers/providers";
 import { capitalize } from "@/lib/utils";
 import { handleStoreSet } from "./handlers/handleStoreSet";
@@ -10,10 +15,21 @@ import { handleStorePatch } from "./handlers/handleStorePatch";
 
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 import { handleStoreFetch } from "./handlers/handleStoreFetch";
-import type { Message } from "@/messages/types";
+import type {
+    Message,
+    MessageMap,
+    RuntimeChannel,
+    RuntimeDataMap,
+} from "@/messages/types";
+import { run } from "svelte/legacy";
 
 function runBackgroundScript() {
     const store = new SettingsStore();
+    const runtimeCache: {
+        [K in RuntimeChannel]: Partial<Record<SiteName, RuntimeDataMap[K]>>;
+    } = {
+        studies: {},
+    };
 
     const filteredUrls = supportedHosts.flatMap((host) =>
         sites[host].watchedRequestTargets.map(
@@ -47,14 +63,14 @@ function runBackgroundScript() {
         );
     }
 
-    async function sendExtensionPageMessage(
-        message: Message<"store-changed">,
+    async function sendExtensionPageMessage<K extends keyof MessageMap>(
+        message: Message<K>,
     ): Promise<void> {
         try {
             await browser.runtime.sendMessage(message);
         } catch (error) {
             if (!isMissingReceiverError(error)) {
-                console.error("Error sending popup store change:", error);
+                console.error("Error sending extension page message:", error);
             }
         }
     }
@@ -252,6 +268,43 @@ function runBackgroundScript() {
     onExtensionMessage("store-set", (payload) =>
         handleStoreSet(store, payload),
     );
+
+    function runtimeEquals<K extends RuntimeChannel>(
+        current: RuntimeDataMap[K] | undefined,
+        next: RuntimeDataMap[K],
+    ): boolean {
+        return JSON.stringify(current ?? null) === JSON.stringify(next);
+    }
+
+    onExtensionMessage("runtime-sync", async (payload) => {
+        const current = runtimeCache[payload.channel][payload.siteName];
+        const unchanged = runtimeEquals(current, payload.data);
+        if (unchanged) return;
+
+        runtimeCache[payload.channel][payload.siteName] = structuredClone(
+            payload.data,
+        );
+
+        await sendExtensionPageMessage({
+            type: "runtime-changed",
+            data: {
+                channel: payload.channel,
+                siteName: payload.siteName,
+                data: structuredClone(payload.data),
+            },
+        });
+    });
+
+    onExtensionMessage("runtime-fetch", (payload) => {
+        const data = runtimeCache[payload.channel][payload.siteName];
+        if (data === undefined) return null;
+
+        return {
+            channel: payload.channel,
+            siteName: payload.siteName,
+            data: structuredClone(data),
+        };
+    });
 
     onExtensionMessage("survey-completion", async (payload) => {
         const { siteName } = payload;

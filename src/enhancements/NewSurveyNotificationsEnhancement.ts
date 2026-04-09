@@ -2,6 +2,7 @@ import { capitalize, cleanResearcherName } from "../lib/utils";
 import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
 import getSiteResources from "../lib/getSiteResources";
+import { playNotificationSound } from "@/lib/playNotificationSound";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 
 import type { SurveyInfo } from "../adapters/BaseAdapter";
@@ -24,6 +25,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             cachedResearchers: previousCachedResearchers,
             includedResearchers,
             excludedResearchers,
+            delivery,
         } = newSurveyNotifications;
 
         const newSurveys = this.extractNewSurveys(previousSurveys, surveys);
@@ -66,11 +68,24 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
             notifications.push(this.buildNotification(survey, assets));
         }
+
+        if (notifications.length === 0) return;
+
+        if (delivery.sound.enabled) {
+            try {
+                await playNotificationSound(delivery.sound);
+            } catch (error) {
+                console.error("Error playing notification sound:", error);
+            }
+        }
+
+        if (!delivery.browser) return;
+
         await sendExtensionMessage({
             type: "notification",
             data: {
                 siteName: this.adapter.config.name,
-                notifications: notifications,
+                notifications,
             },
         });
     }

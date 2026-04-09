@@ -14,6 +14,14 @@ const defaultSiteSettings = Object.freeze({
         cachedResearchers: {},
         excludedResearchers: [],
         includedResearchers: [],
+        delivery: {
+            browser: true,
+            sound: {
+                enabled: false,
+                type: "chime",
+                volume: 0.6,
+            },
+        },
     },
     autoReload: {
         enabled: false,

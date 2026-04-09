@@ -4,7 +4,6 @@ import {
     type SiteName,
     type SupportedHosts,
 } from "@/adapters/siteConfigs";
-import deepMerge from "@/lib/deepMerge";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import {
@@ -15,14 +14,17 @@ import {
     defaultSiteSettings,
     defaultSiteSettingsKeys,
 } from "@/store/defaultSiteSettings";
-import { settingsState, uiState } from "./state.svelte";
+import { runtimeState, settingsState, uiState } from "./state.svelte";
 
 import type {
     Message,
     MessageMap,
+    RuntimeChangedMessage,
+    RuntimeDataMap,
     StoreChangedMessage,
     StoreMutationMessageType,
 } from "@/messages/types";
+import { RuntimeState } from "./types";
 
 let globalsPromise: Promise<void> | null = null;
 export let pendingMutation: Promise<void> = Promise.resolve();
@@ -80,6 +82,26 @@ async function loadSite(host: SupportedHosts) {
     }
 }
 
+async function loadRuntimeState(host: SupportedHosts) {
+    for (const channel of Object.keys(runtimeState) as (keyof RuntimeState)[]) {
+        if (host in runtimeState[channel]) continue;
+
+        try {
+            const response = await sendExtensionMessage({
+                type: "runtime-fetch",
+                data: {
+                    channel,
+                    siteName: sites[host].name,
+                },
+            });
+            runtimeState[channel][host] = response?.data ?? null;
+        } catch (error) {
+            console.error(error);
+            runtimeState[channel][host] = null;
+        }
+    }
+}
+
 export function queueMutation<T extends StoreMutationMessageType>(
     type: T,
     values: MessageMap[T],
@@ -118,22 +140,18 @@ export function queueMutation<T extends StoreMutationMessageType>(
 
 export async function selectHost(host: SupportedHosts) {
     uiState.selectedHost = host;
-    await loadSite(host);
+    await Promise.all([loadSite(host), loadRuntimeState(host)]);
 }
 
-function applyStoreChange(payload: StoreChangedMessage) {
-    if (payload.namespace !== "sites") return;
+function applyStoreChange(payload: StoreChangedMessage) {}
 
-    const surveys = payload.data.newSurveyNotifications?.surveys;
-    if (!surveys) return;
+function applyRuntimeChange(payload: RuntimeChangedMessage) {
+    if (!(payload.channel in runtimeState)) return;
 
-    const host = siteNameToHost[payload.entry];
-    const current = settingsState.sites[host];
-    if (!current) return;
+    const host = siteNameToHost[payload.siteName];
+    if (!host) return;
 
-    settingsState.sites[host] = deepMerge(current, {
-        newSurveyNotifications: { surveys },
-    });
+    runtimeState[payload.channel][host] = payload.data;
 }
 
 async function initializePopup() {
@@ -153,15 +171,26 @@ async function initializePopup() {
         }
     }
 
-    await Promise.all([loadGlobals(), loadSite(uiState.selectedHost)]);
+    await Promise.all([
+        loadGlobals(),
+        loadSite(uiState.selectedHost),
+        loadRuntimeState(uiState.selectedHost),
+    ]);
 }
 
 export function initPopup() {
-    const unsubscribe = onExtensionMessage("store-changed", (payload) => {
+    const unsubscribeStore = onExtensionMessage("store-changed", (payload) => {
         applyStoreChange(payload);
     });
+    const unsubscribeRuntime = onExtensionMessage(
+        "runtime-changed",
+        (payload) => applyRuntimeChange(payload),
+    );
 
     void initializePopup();
 
-    return unsubscribe;
+    return () => {
+        unsubscribeStore();
+        unsubscribeRuntime();
+    };
 }
