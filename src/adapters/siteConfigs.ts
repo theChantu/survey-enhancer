@@ -22,7 +22,7 @@ export const sites = {
         networkPatterns: {
             studyCompletion: [
                 {
-                    path: "/submissions/complete",
+                    path: "/transition",
                     method: "POST",
                 },
             ],

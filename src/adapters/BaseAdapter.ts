@@ -161,15 +161,9 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return this.buildUrl([studyPath, studyId, ...(suffix ? [suffix] : [])]);
     }
 
-    private getDisplayValue(el: HTMLElement): number | null {
-        if (!el) return null;
-
-        const { originalText, displaySymbol, originalSymbol } =
-            this.getRewardState(el);
-        const converted = displaySymbol !== originalSymbol;
-        const text = converted
-            ? el.textContent
-            : (originalText ?? el.textContent);
+    private getValue(el: HTMLElement): number | null {
+        const { originalText } = this.getRewardState(el);
+        const text = originalText ?? el.textContent;
 
         if (!text) return null;
 
@@ -178,27 +172,31 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return Number.isFinite(value) ? value : null;
     }
 
+    private getSymbol(el: HTMLElement): string | null {
+        const { originalSymbol } = this.getRewardState(el);
+        return originalSymbol;
+    }
+
     protected getStudyReward(el: HTMLElement): number | null {
         const rewardEl = this.getRewardElement(el);
         if (!rewardEl) return null;
 
-        return this.getDisplayValue(rewardEl);
+        return this.getValue(rewardEl);
     }
 
     protected getStudyHourlyRate(el: HTMLElement): number | null {
         const rateEl = this.getHourlyRateElement(el);
         if (!rateEl) return null;
 
-        return this.getDisplayValue(rateEl);
+        return this.getValue(rateEl);
     }
 
     extractStudy(el: HTMLElement): StudyInfo | null {
         const id = this.getStudyId(el);
         if (!id) return null;
 
-        const { displaySymbol } = this.getRewardState(
-            this.getRewardElement(el) ?? this.getHourlyRateElement(el) ?? el,
-        );
+        const rewardElement =
+            this.getRewardElement(el) ?? this.getHourlyRateElement(el) ?? el;
 
         return {
             id,
@@ -207,7 +205,7 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
             reward: this.getStudyReward(el),
             rate: this.getStudyHourlyRate(el),
             link: this.getStudyLink(el),
-            symbol: displaySymbol,
+            symbol: this.getSymbol(rewardElement),
         };
     }
 

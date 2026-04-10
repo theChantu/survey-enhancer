@@ -15,8 +15,8 @@ export interface NotificationData {
 
 export class NotificationsEnhancement extends BaseEnhancement {
     async apply() {
-        const surveys = this.adapter.extractStudies();
-        if (surveys.length === 0) return;
+        const studies = this.adapter.extractStudies();
+        if (studies.length === 0) return;
 
         const { studyAlerts } = this.settings;
         const {
@@ -28,15 +28,15 @@ export class NotificationsEnhancement extends BaseEnhancement {
             excluded,
         } = studyAlerts;
 
-        const newSurveys = this.extractNewSurveys(previousStudies, surveys);
-        if (newSurveys.length === 0) return;
+        const newStudies = this.extractNewStudies(previousStudies, studies);
+        if (newStudies.length === 0) return;
 
         const now = Date.now();
         const assets = await getSiteResources();
 
-        const newResearchers = this.extractNewSurveyResearchers(
+        const newResearchers = this.extractNewResearchers(
             previousCachedResearchers,
-            newSurveys,
+            newStudies,
         );
 
         await sendExtensionMessage({
@@ -47,9 +47,9 @@ export class NotificationsEnhancement extends BaseEnhancement {
                 data: {
                     studyAlerts: {
                         cache: {
-                            studies: this.buildSurveyCache(
+                            studies: this.buildStudyCache(
                                 previousStudies,
-                                newSurveys,
+                                newStudies,
                                 now,
                             ),
                             researchers: this.buildResearcherCache(
@@ -67,8 +67,8 @@ export class NotificationsEnhancement extends BaseEnhancement {
         const excludedSet = new Set(excluded);
 
         const notifications: NotificationData[] = [];
-        for (const survey of newSurveys) {
-            const { researcher } = survey;
+        for (const study of newStudies) {
+            const { researcher } = study;
             if (!researcher) continue;
             const cleanedResearcherName = cleanResearcherName(researcher);
 
@@ -78,7 +78,7 @@ export class NotificationsEnhancement extends BaseEnhancement {
             if (includedSet.size > 0 && !includedSet.has(cleanedResearcherName))
                 continue;
 
-            notifications.push(this.buildNotification(survey, assets));
+            notifications.push(this.buildNotification(study, assets));
         }
 
         if (notifications.length === 0) return;
@@ -112,43 +112,43 @@ export class NotificationsEnhancement extends BaseEnhancement {
         return cachedResearchers;
     }
 
-    private extractNewSurveyResearchers(
+    private extractNewResearchers(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        surveys: StudyInfo[],
+        studies: StudyInfo[],
     ) {
         const researchers = new Set<string>();
-        for (const survey of surveys) {
-            if (!survey.researcher) continue;
+        for (const study of studies) {
+            if (!study.researcher) continue;
 
-            const researcher = cleanResearcherName(survey.researcher);
+            const researcher = cleanResearcherName(study.researcher);
             if (researcher in previous) continue;
             researchers.add(researcher);
         }
         return researchers;
     }
 
-    private buildSurveyCache(
+    private buildStudyCache(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        surveys: StudyInfo[],
+        studies: StudyInfo[],
         now: ReturnType<typeof Date.now>,
     ) {
         const previousClone = structuredClone(previous);
 
-        // Survey fingerprint cleanup
+        // Study fingerprint cleanup
         for (const [key, timestamp] of Object.entries(previousClone)) {
             if (now - timestamp >= NOTIFY_TTL_MS) {
                 delete previousClone[key];
             }
         }
 
-        for (const survey of surveys) {
-            previousClone[survey.id] = now;
+        for (const study of studies) {
+            previousClone[study.id] = now;
         }
 
         return previousClone;
     }
 
-    private extractNewSurveys(
+    private extractNewStudies(
         previous: Record<string, ReturnType<typeof Date.now>>,
         current: StudyInfo[],
     ) {

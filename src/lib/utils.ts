@@ -69,6 +69,15 @@ function getCurrency(symbolOrCode: string): Currency | undefined {
     );
 }
 
+function getCurrencySymbol(currency: Currency) {
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+    })
+        .formatToParts(0)
+        .find((part) => part.type === "currency")?.value;
+}
+
 function rateToColor(rate: number, min = 7, max = 15) {
     const clamped = Math.min(Math.max(rate, min), max);
 
@@ -79,7 +88,7 @@ function rateToColor(rate: number, min = 7, max = 15) {
     const ratio = (logRate - logMin) / (logMax - logMin);
     const t = Math.pow(ratio, 0.6);
 
-    // blue -> teal -> emerald
+    // blue -> teal -> emerald.
     const r = Math.round(130 * (1 - t) + 52 * t);
     const g = Math.round(150 * (1 - t) + 211 * t);
     const b = Math.round(220 * (1 - t) + 153 * t);
@@ -95,5 +104,6 @@ export {
     scheduleTimeout,
     capitalize,
     getCurrency,
+    getCurrencySymbol,
     rateToColor,
 };

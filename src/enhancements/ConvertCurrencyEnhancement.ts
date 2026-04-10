@@ -1,84 +1,19 @@
-import { CONVERSION_RATES_FETCH_INTERVAL_MS } from "../constants";
+import { ensureConversionRates } from "@/lib/ensureConversionRates";
+import { getCurrencySymbol, getCurrency } from "@/lib/utils";
 import BaseEnhancement from "./BaseEnhancement";
 import extractNumericValue from "@/lib/extractNumericValue";
-import { getCurrency } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
-import {
-    currencyKeysSet,
-    type Currency,
-    type ExchangeRatesResponse,
-    GlobalSettings,
-} from "../store/types";
 
-type ConversionRates = GlobalSettings["conversionRates"];
-function isExchangeRatesResponse(
-    value: unknown,
-): value is ExchangeRatesResponse {
-    if (!value || typeof value !== "object") return false;
-
-    const data = value as Record<string, unknown>;
-
-    if (data.result !== "success" && data.result !== "error") return false;
-    if (typeof data.base_code !== "string") return false;
-    if (!currencyKeysSet.has(data.base_code as Currency)) return false;
-
-    if (!data.rates || typeof data.rates !== "object") return false;
-
-    const rates = data.rates as Record<string, unknown>;
-
-    for (const code of currencyKeysSet) {
-        if (typeof rates[code] !== "number") {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-async function fetchRates(
-    conversionRates: ConversionRates,
-    currency: Currency,
-) {
-    const clonedConversionRates = structuredClone(conversionRates);
-
-    try {
-        const data = await sendExtensionMessage({
-            type: "fetch",
-            data: { url: `https://open.er-api.com/v6/latest/${currency}` },
-        });
-        if (!isExchangeRatesResponse(data)) {
-            throw new Error("Invalid exchange rates response");
-        }
-
-        const { base_code, rates } = data;
-
-        for (const [k, v] of Object.entries(rates) as [Currency, number][]) {
-            clonedConversionRates[base_code].rates[k] = v;
-        }
-    } catch (error) {
-        console.error(error);
-    }
-
-    return clonedConversionRates as ConversionRates;
-}
-
-function getSymbol(currency: Currency) {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: currency,
-    })
-        .formatToParts(0)
-        .find((part) => part.type === "currency")?.value;
-}
+import type { Currency, GlobalSettings } from "../store/types";
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
         const { currency, conversionRates } = this.settings;
 
         const rewardElements = this.adapter.getRewardElements();
-        const selectedSymbol = getSymbol(currency.target);
+        const selectedSymbol = getCurrencySymbol(currency.target);
 
-        // Update conversion rates for all source currencies found in the elements
+        // Update conversion rates for all source currencies found in the elements.
         const sourceCurrencies = new Set<Currency>();
         for (const rewardEl of rewardElements) {
             const { originalSymbol } = this.adapter.getRewardState(rewardEl);
@@ -88,10 +23,23 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             if (currency) sourceCurrencies.add(currency);
         }
 
-        const updatedConversionRates = await this.updateRates(conversionRates, [
-            currency.target,
-            ...sourceCurrencies,
-        ]);
+        const { conversionRates: updatedConversionRates, updated } =
+            await ensureConversionRates(conversionRates, [
+                currency.target,
+                ...sourceCurrencies,
+            ]);
+
+        if (updated) {
+            await sendExtensionMessage({
+                type: "store-patch",
+                data: {
+                    namespace: "globals",
+                    data: {
+                        conversionRates: updatedConversionRates,
+                    },
+                },
+            });
+        }
 
         for (const rewardEl of rewardElements) {
             const {
@@ -107,7 +55,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             if (!sourceCurrency) continue;
 
             if (sourceCurrency === currency.target) {
-                // Selected currency matches source, so revert element text
+                // Selected currency matches source, so revert element text.
                 if (rewardEl.innerHTML !== originalHtml) {
                     this.adapter.restoreRewardState(rewardEl);
                 }
@@ -115,7 +63,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
                 continue;
             }
 
-            // Continue if currency is already converted
+            // Continue if currency is already converted.
             if (displaySymbol === selectedSymbol) continue;
 
             this.adapter.setRewardState(rewardEl, {
@@ -129,41 +77,6 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
 
             this.adapter.setRewardText(rewardEl, converted);
         }
-    }
-
-    private async updateRates(
-        conversionRates: ConversionRates,
-        currencies: Currency[],
-    ) {
-        const now = Date.now();
-        let updated = false;
-        let rates = conversionRates;
-
-        for (const currency of new Set(currencies)) {
-            if (
-                now - rates[currency].timestamp <
-                CONVERSION_RATES_FETCH_INTERVAL_MS
-            )
-                continue;
-
-            rates = await fetchRates(rates, currency);
-            rates[currency].timestamp = now;
-            updated = true;
-        }
-
-        if (updated) {
-            await sendExtensionMessage({
-                type: "store-patch",
-                data: {
-                    namespace: "globals",
-                    data: {
-                        conversionRates: rates,
-                    },
-                },
-            });
-        }
-
-        return rates;
     }
 
     async revert() {

@@ -5,10 +5,17 @@
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
     import { runtimeState, settingsState, uiState } from "../../state.svelte";
     import { queueMutation } from "../../popupModel.svelte";
-    import { capitalize, getCurrency, rateToColor } from "@/lib/utils";
+    import {
+        capitalize,
+        getCurrency,
+        getCurrencySymbol,
+        rateToColor,
+    } from "@/lib/utils";
+    import { ensureConversionRates } from "@/lib/ensureConversionRates";
 
     import type { StudyItem, StudiesTabModel } from "../../types";
-    import type { StudySort } from "@/store/types";
+    import type { StudySort, Currency, GlobalSettings } from "@/store/types";
+    import type { StudyInfo } from "@/adapters/BaseAdapter";
 
     let { model }: { model: StudiesTabModel } = $props();
 
@@ -25,7 +32,7 @@
         { value: "lowest-rate", label: "Lowest hourly rate" },
     ];
 
-    function sortStudyItems(items: StudyItem[], sort: StudySort): StudyItem[] {
+    function sortStudies(items: StudyItem[], sort: StudySort): StudyItem[] {
         const sorted = [...items];
         const compareNullable = (
             left: number | null,
@@ -62,7 +69,70 @@
         }
     }
 
-    function toNormalizedColor(
+    function convertStudyDisplayValues(
+        study: StudyInfo,
+    ): Pick<StudyInfo, "reward" | "rate" | "symbol"> {
+        const fallback = {
+            reward: study.reward,
+            rate: study.rate,
+            symbol: study.symbol,
+        };
+
+        if (!settingsState.globals.currency.enabled || !study.symbol) {
+            return fallback;
+        }
+
+        const targetCurrency = settingsState.globals.currency.target;
+        const sourceCurrency = getCurrency(study.symbol);
+        if (!sourceCurrency) {
+            return fallback;
+        }
+
+        const targetSymbol = getCurrencySymbol(targetCurrency) ?? study.symbol;
+        if (sourceCurrency === targetCurrency) {
+            return {
+                reward: study.reward,
+                rate: study.rate,
+                symbol: targetSymbol,
+            };
+        }
+
+        const sourceRates =
+            settingsState.globals.conversionRates[sourceCurrency];
+        if (!sourceRates || sourceRates.timestamp === 0) {
+            return fallback;
+        }
+
+        const conversionRate = sourceRates.rates[targetCurrency];
+        return {
+            reward:
+                study.reward === null ? null : study.reward * conversionRate,
+            rate: study.rate === null ? null : study.rate * conversionRate,
+            symbol: targetSymbol,
+        };
+    }
+
+    function updateConversionRates(
+        currencies: Currency[],
+        conversionRates: GlobalSettings["conversionRates"],
+    ) {
+        if (currencies.length === 0) return;
+
+        void (async () => {
+            const { conversionRates: newConversionRates, updated } =
+                await ensureConversionRates(conversionRates, currencies);
+            if (!updated) return;
+
+            await queueMutation("store-patch", {
+                namespace: "globals",
+                data: {
+                    conversionRates: newConversionRates,
+                },
+            });
+        })();
+    }
+
+    function getNormalizedRateColor(
         rate: number | null,
         symbol: string | null,
     ): string | null {
@@ -71,10 +141,54 @@
         if (!currency) return null;
         if (currency === "USD") return rateToColor(rate);
 
-        const conversionRate =
-            settingsState.globals.conversionRates[currency]?.rates.USD;
+        const sourceRates = settingsState.globals.conversionRates[currency];
+        if (!sourceRates || sourceRates.timestamp === 0) return null;
+
+        const conversionRate = sourceRates.rates.USD;
         return conversionRate ? rateToColor(rate * conversionRate) : null;
     }
+
+    const runtimeCurrencies = $derived.by(() => {
+        const currencies = new Set<Currency>();
+
+        for (const host of supportedHosts) {
+            const studies = runtimeState.studies[host];
+            if (!studies) continue;
+
+            for (const study of studies) {
+                if (!study.symbol) continue;
+                const currency = getCurrency(study.symbol);
+                if (currency) {
+                    currencies.add(currency);
+                }
+            }
+        }
+
+        return [...currencies];
+    });
+
+    const currenciesNeedingRates = $derived.by(() => {
+        if (!settingsState.globals.currency.enabled) return [];
+
+        return [
+            ...new Set([
+                settingsState.globals.currency.target,
+                ...runtimeCurrencies,
+            ]),
+        ];
+    });
+
+    $effect(() => {
+        if (
+            settingsState.globals.currency.enabled &&
+            currenciesNeedingRates.length > 0
+        ) {
+            const snapshot = $state.snapshot(
+                settingsState.globals.conversionRates,
+            );
+            updateConversionRates(currenciesNeedingRates, snapshot);
+        }
+    });
 
     const studies: StudyItem[] = $derived.by(() => {
         const items: StudyItem[] = [];
@@ -85,13 +199,16 @@
             if (!Array.isArray(studies)) continue;
 
             for (const study of studies) {
+                const display = convertStudyDisplayValues(study);
+
                 items.push({
                     ...study,
+                    ...display,
                     host,
                     siteName: sites[host].name,
                     siteLabel: capitalize(sites[host].name),
                     order,
-                    color: toNormalizedColor(study.rate, study.symbol),
+                    color: getNormalizedRateColor(display.rate, display.symbol),
                 });
                 order += 1;
             }
@@ -119,7 +236,7 @@
             Array.isArray(runtimeState.studies[host]),
         ),
     );
-    const sortedStudies = $derived(sortStudyItems(studies, studySort));
+    const sortedStudies = $derived(sortStudies(studies, studySort));
     const emptyMessage = $derived.by(() => {
         if (loading) {
             return "Looking for live studies across your synced tabs.";
