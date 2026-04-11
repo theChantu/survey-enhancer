@@ -75,25 +75,37 @@ type PlaySoundMessage = {
     volume: number;
 };
 
-export type RuntimeDataMap = {
+export type RuntimeSeenMeta = {
+    firstSeenAt: number;
+    lastSeenAt: number;
+};
+
+export type RuntimeInputDataMap = {
     studies: StudyInfo[];
 };
 
-export type RuntimeChannel = keyof RuntimeDataMap;
+export type RuntimeOutputDataMap = {
+    studies: Array<RuntimeInputDataMap["studies"][number] & RuntimeSeenMeta>;
+};
 
-type RuntimeTarget<K extends RuntimeChannel = RuntimeChannel> = {
+export type RuntimeChannel = keyof RuntimeInputDataMap & keyof RuntimeOutputDataMap;
+
+type RuntimeTarget<
+    TDataMap extends Partial<Record<RuntimeChannel, unknown>>,
+    K extends keyof TDataMap & RuntimeChannel = keyof TDataMap & RuntimeChannel,
+> = {
     channel: K;
     siteName: SiteName;
-    data: RuntimeDataMap[K];
+    data: TDataMap[K];
 };
 
 export type RuntimeSyncMessage<K extends RuntimeChannel = RuntimeChannel> =
-    RuntimeTarget<K>;
+    RuntimeTarget<RuntimeInputDataMap, K>;
 
 export type RuntimeChangedMessage<K extends RuntimeChannel = RuntimeChannel> = {
     channel: K;
     siteName: SiteName;
-    data: RuntimeDataMap[K] | null;
+    data: RuntimeOutputDataMap[K] | null;
 };
 
 export type RuntimeFetchMessage<K extends RuntimeChannel = RuntimeChannel> = {
@@ -102,7 +114,7 @@ export type RuntimeFetchMessage<K extends RuntimeChannel = RuntimeChannel> = {
 };
 
 export type RuntimeFetchResponse<K extends RuntimeChannel = RuntimeChannel> =
-    RuntimeTarget<K> | null;
+    RuntimeTarget<RuntimeOutputDataMap, K> | null;
 
 export interface MessageMap extends StoreMutationMessage {
     "store-fetch": StoreFetchMessage;

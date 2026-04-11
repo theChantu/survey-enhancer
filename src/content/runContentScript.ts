@@ -10,7 +10,7 @@ import { loadSettings } from "../lib/loadSettings";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
 import type { ContentScriptContext } from "#imports";
-import type { DeepPartial, Settings } from "@/store/types";
+import type { DeepPartial, Settings, SiteSettings } from "@/store/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
@@ -66,12 +66,6 @@ async function runContentScript(ctx: ContentScriptContext) {
         debounced();
     });
 
-    // Apply the enhancements initially
-    await runEnhancements();
-
-    const { minInterval, maxInterval } = site.autoReload;
-
-    const ms = getRandomTimeoutMs(minInterval, maxInterval);
     const pageReloadTimeout = scheduleTimeout(() => {
         if (!document.hidden) {
             pageReloadTimeout.reset();
@@ -80,47 +74,73 @@ async function runContentScript(ctx: ContentScriptContext) {
 
         log("Refreshing page...");
         location.reload();
-    }, ms);
+    });
 
-    function handleAutoReloadSettingChange(enabled: boolean) {
-        if (enabled) {
-            log("Page refresh scheduled.");
-            pageReloadTimeout.start();
-        } else {
-            log("Page refresh canceled.");
+    // Apply the enhancements initially
+    await runEnhancements();
+
+    function initializeAutoReload(autoReload: SiteSettings["autoReload"]) {
+        if (!autoReload.enabled) return;
+
+        const delay = getRandomTimeoutMs(
+            autoReload.minInterval,
+            autoReload.maxInterval,
+        );
+
+        log("Page refresh scheduled.");
+        pageReloadTimeout.setDelay(delay);
+        pageReloadTimeout.start();
+
+        return pageReloadTimeout;
+    }
+
+    function updateAutoReload(
+        previous: SiteSettings["autoReload"],
+        next: SiteSettings["autoReload"],
+    ) {
+        const intervalsChanged =
+            next.minInterval !== previous.minInterval ||
+            next.maxInterval !== previous.maxInterval;
+
+        if (!next.enabled) {
+            if (previous.enabled) {
+                log("Page refresh canceled.");
+            }
             pageReloadTimeout.clear();
+            return;
+        }
+
+        const delay = getRandomTimeoutMs(next.minInterval, next.maxInterval);
+
+        if (!previous.enabled) {
+            log("Page refresh scheduled.");
+            pageReloadTimeout.setDelay(delay);
+            pageReloadTimeout.start();
+            return;
+        }
+
+        if (intervalsChanged) {
+            log(
+                "Page refresh interval updated. New interval (min):",
+                delay / 60000,
+            );
+            pageReloadTimeout.setDelay(delay);
         }
     }
 
-    if (site.autoReload.enabled) {
-        handleAutoReloadSettingChange(site.autoReload.enabled);
-    }
+    initializeAutoReload(site.autoReload);
 
     onExtensionMessage("store-changed", (payload) => {
         if (payload.namespace === "globals") {
             globals = deepMerge(globals, payload.data);
         } else {
             if (payload.entry !== adapter.config.name) return;
+
+            const previousAutoReload = site.autoReload;
             site = deepMerge(site, payload.data);
 
             if (payload.data.autoReload) {
-                const { minInterval, maxInterval, enabled } =
-                    payload.data.autoReload;
-                if (enabled !== undefined) {
-                    handleAutoReloadSettingChange(enabled);
-                }
-
-                if (enabled === true && (minInterval || maxInterval)) {
-                    const ms = getRandomTimeoutMs(
-                        site.autoReload.minInterval,
-                        site.autoReload.maxInterval,
-                    );
-                    log(
-                        "Page refresh interval updated. New interval (ms):",
-                        ms / (60 * 1000),
-                    );
-                    pageReloadTimeout.setDelay(ms);
-                }
+                updateAutoReload(previousAutoReload, site.autoReload);
             }
         }
 

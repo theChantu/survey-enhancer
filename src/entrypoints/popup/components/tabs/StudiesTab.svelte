@@ -12,9 +12,15 @@
         rateToColor,
     } from "@/lib/utils";
     import { ensureConversionRates } from "@/lib/ensureConversionRates";
+    import {
+        studySortOptions,
+        type StudySort,
+        Currency,
+        GlobalSettings,
+    } from "@/store/types";
+    import { HIGHLIGHT_BASE_CURRENCY } from "@/constants";
 
     import type { StudyItem, StudiesTabModel } from "../../types";
-    import type { StudySort, Currency, GlobalSettings } from "@/store/types";
     import type { StudyInfo } from "@/adapters/BaseAdapter";
 
     let { model }: { model: StudiesTabModel } = $props();
@@ -24,49 +30,60 @@
         label: string;
     };
 
-    const sortOptions: SortOption[] = [
-        { value: "page-order", label: "Page order" },
-        { value: "highest-reward", label: "Highest reward" },
-        { value: "lowest-reward", label: "Lowest reward" },
-        { value: "highest-rate", label: "Highest hourly rate" },
-        { value: "lowest-rate", label: "Lowest hourly rate" },
-    ];
+    const options: SortOption[] = studySortOptions.map((value) => ({
+        value,
+        label: capitalize(value.replaceAll("-", " ")),
+    }));
+
+    function compareNullableNumbers(
+        left: number | null,
+        right: number | null,
+        direction: "asc" | "desc",
+    ): number {
+        if (left === null && right === null) return 0;
+        if (left === null) return 1;
+        if (right === null) return -1;
+
+        return direction === "asc" ? left - right : right - left;
+    }
 
     function sortStudies(items: StudyItem[], sort: StudySort): StudyItem[] {
         const sorted = [...items];
-        const compareNullable = (
-            left: number | null,
-            right: number | null,
-            direction: "asc" | "desc",
-        ) => {
-            if (left === null && right === null) return 0;
-            if (left === null) return 1;
-            if (right === null) return -1;
 
-            return direction === "asc" ? left - right : right - left;
+        const sorters: Record<
+            StudySort,
+            (left: StudyItem, right: StudyItem) => number
+        > = {
+            newest: (left, right) => right.firstSeenAt - left.firstSeenAt,
+            oldest: (left, right) => left.firstSeenAt - right.firstSeenAt,
+            "highest-reward": (left, right) =>
+                compareNullableNumbers(
+                    left.normalizedReward,
+                    right.normalizedReward,
+                    "desc",
+                ),
+            "lowest-reward": (left, right) =>
+                compareNullableNumbers(
+                    left.normalizedReward,
+                    right.normalizedReward,
+                    "asc",
+                ),
+            "highest-hourly-rate": (left, right) =>
+                compareNullableNumbers(
+                    left.normalizedRate,
+                    right.normalizedRate,
+                    "desc",
+                ),
+            "lowest-hourly-rate": (left, right) =>
+                compareNullableNumbers(
+                    left.normalizedRate,
+                    right.normalizedRate,
+                    "asc",
+                ),
+            "page-order": (left, right) => left.order - right.order,
         };
 
-        switch (sort) {
-            case "highest-reward":
-                return sorted.sort((left, right) =>
-                    compareNullable(left.reward, right.reward, "desc"),
-                );
-            case "lowest-reward":
-                return sorted.sort((left, right) =>
-                    compareNullable(left.reward, right.reward, "asc"),
-                );
-            case "highest-rate":
-                return sorted.sort((left, right) =>
-                    compareNullable(left.rate, right.rate, "desc"),
-                );
-            case "lowest-rate":
-                return sorted.sort((left, right) =>
-                    compareNullable(left.rate, right.rate, "asc"),
-                );
-            case "page-order":
-            default:
-                return sorted.sort((left, right) => left.order - right.order);
-        }
+        return sorted.sort(sorters[sort] ?? sorters["page-order"]);
     }
 
     function convertStudyDisplayValues(
@@ -84,9 +101,7 @@
 
         const targetCurrency = settingsState.globals.currency.target;
         const sourceCurrency = getCurrency(study.symbol);
-        if (!sourceCurrency) {
-            return fallback;
-        }
+        if (!sourceCurrency) return fallback;
 
         const targetSymbol = getCurrencySymbol(targetCurrency) ?? study.symbol;
         if (sourceCurrency === targetCurrency) {
@@ -99,11 +114,11 @@
 
         const sourceRates =
             settingsState.globals.conversionRates[sourceCurrency];
-        if (!sourceRates || sourceRates.timestamp === 0) {
-            return fallback;
-        }
+        if (!sourceRates || sourceRates.timestamp === 0) return fallback;
 
         const conversionRate = sourceRates.rates[targetCurrency];
+        if (!conversionRate) return fallback;
+
         return {
             reward:
                 study.reward === null ? null : study.reward * conversionRate,
@@ -112,51 +127,48 @@
         };
     }
 
-    function updateConversionRates(
-        currencies: Currency[],
-        conversionRates: GlobalSettings["conversionRates"],
-    ) {
-        if (currencies.length === 0) return;
-
-        void (async () => {
-            const { conversionRates: newConversionRates, updated } =
-                await ensureConversionRates(conversionRates, currencies);
-            if (!updated) return;
-
-            await queueMutation("store-patch", {
-                namespace: "globals",
-                data: {
-                    conversionRates: newConversionRates,
-                },
-            });
-        })();
-    }
-
     function getNormalizedRateColor(
         rate: number | null,
         symbol: string | null,
     ): string | null {
-        if (rate === null || !symbol) return null;
-        const currency = getCurrency(symbol);
-        if (!currency) return null;
-        if (currency === "USD") return rateToColor(rate);
+        const normalizedRate = getNormalizedValue(
+            rate,
+            symbol,
+            HIGHLIGHT_BASE_CURRENCY,
+        );
 
-        const sourceRates = settingsState.globals.conversionRates[currency];
+        return normalizedRate === null ? null : rateToColor(normalizedRate);
+    }
+
+    function getNormalizedValue(
+        value: number | null,
+        symbol: string | null,
+        targetCurrency: Currency,
+    ): number | null {
+        if (value === null || !symbol) return null;
+
+        const sourceCurrency = getCurrency(symbol);
+        if (!sourceCurrency) return null;
+        if (sourceCurrency === targetCurrency) return value;
+
+        const sourceRates =
+            settingsState.globals.conversionRates[sourceCurrency];
         if (!sourceRates || sourceRates.timestamp === 0) return null;
 
-        const conversionRate = sourceRates.rates.USD;
-        return conversionRate ? rateToColor(rate * conversionRate) : null;
+        const conversionRate = sourceRates.rates[targetCurrency];
+        return conversionRate ? value * conversionRate : null;
     }
 
     const runtimeCurrencies = $derived.by(() => {
         const currencies = new Set<Currency>();
 
         for (const host of supportedHosts) {
-            const studies = runtimeState.studies[host];
-            if (!studies) continue;
+            const hostStudies = runtimeState.studies[host];
+            if (!hostStudies) continue;
 
-            for (const study of studies) {
+            for (const study of hostStudies) {
                 if (!study.symbol) continue;
+
                 const currency = getCurrency(study.symbol);
                 if (currency) {
                     currencies.add(currency);
@@ -167,27 +179,54 @@
         return [...currencies];
     });
 
-    const currenciesNeedingRates = $derived.by(() => {
-        if (!settingsState.globals.currency.enabled) return [];
+    async function updateConversionRates(
+        currencies: Currency[],
+        conversionRates: GlobalSettings["conversionRates"],
+    ): Promise<void> {
+        if (currencies.length === 0) return;
 
-        return [
-            ...new Set([
-                settingsState.globals.currency.target,
-                ...runtimeCurrencies,
-            ]),
-        ];
+        const { conversionRates: newConversionRates, updated } =
+            await ensureConversionRates(conversionRates, currencies);
+
+        if (!updated) return;
+
+        await queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                conversionRates: newConversionRates,
+            },
+        });
+    }
+
+    const currenciesNeedingRates = $derived.by(() => {
+        const currencyEnabled = settingsState.globals.currency.enabled;
+        const highlightEnabled = settingsState.globals.highlightRates.enabled;
+
+        if (!currencyEnabled && !highlightEnabled) {
+            return [];
+        }
+
+        const currencies = new Set<Currency>();
+
+        if (currencyEnabled) {
+            currencies.add(settingsState.globals.currency.target);
+        }
+
+        for (const currency of runtimeCurrencies) {
+            if (highlightEnabled && currency === HIGHLIGHT_BASE_CURRENCY) {
+                continue;
+            }
+            currencies.add(currency);
+        }
+
+        return [...currencies];
     });
 
     $effect(() => {
-        if (
-            settingsState.globals.currency.enabled &&
-            currenciesNeedingRates.length > 0
-        ) {
-            const snapshot = $state.snapshot(
-                settingsState.globals.conversionRates,
-            );
-            updateConversionRates(currenciesNeedingRates, snapshot);
-        }
+        if (currenciesNeedingRates.length === 0) return;
+
+        const snapshot = $state.snapshot(settingsState.globals.conversionRates);
+        void updateConversionRates(currenciesNeedingRates, snapshot);
     });
 
     const studies: StudyItem[] = $derived.by(() => {
@@ -195,10 +234,10 @@
         let order = 0;
 
         for (const host of supportedHosts) {
-            const studies = runtimeState.studies[host];
-            if (!Array.isArray(studies)) continue;
+            const hostStudies = runtimeState.studies[host];
+            if (!Array.isArray(hostStudies)) continue;
 
-            for (const study of studies) {
+            for (const study of hostStudies) {
                 const display = convertStudyDisplayValues(study);
 
                 items.push({
@@ -209,7 +248,18 @@
                     siteLabel: capitalize(sites[host].name),
                     order,
                     color: getNormalizedRateColor(display.rate, display.symbol),
+                    normalizedReward: getNormalizedValue(
+                        study.reward,
+                        study.symbol,
+                        HIGHLIGHT_BASE_CURRENCY,
+                    ),
+                    normalizedRate: getNormalizedValue(
+                        study.rate,
+                        study.symbol,
+                        HIGHLIGHT_BASE_CURRENCY,
+                    ),
                 });
+
                 order += 1;
             }
         }
@@ -266,7 +316,7 @@
                     onchange={(e) =>
                         patchStudySort(e.currentTarget.value as StudySort)}
                 >
-                    {#each sortOptions as option}
+                    {#each options as option}
                         <option value={option.value}>{option.label}</option>
                     {/each}
                 </select>

@@ -1,8 +1,7 @@
-import type { StudyInfo } from "@/adapters/BaseAdapter";
 import type { SiteName, SupportedHosts } from "@/adapters/siteConfigs";
 import type {
     MessageMap,
-    RuntimeDataMap,
+    RuntimeOutputDataMap,
     StoreMutationMessageType,
 } from "@/messages/types";
 import type { GlobalSettings, SiteSettings } from "@/store/types";
@@ -21,8 +20,8 @@ export type UiState = {
 };
 
 export type RuntimeState = {
-    [K in keyof RuntimeDataMap]: Partial<
-        Record<SupportedHosts, RuntimeDataMap[K] | null>
+    [K in keyof RuntimeOutputDataMap]: Partial<
+        Record<SupportedHosts, RuntimeOutputDataMap[K] | null>
     >;
 };
 
@@ -32,12 +31,16 @@ export type ActiveSiteState = {
     settings?: SiteSettings;
 };
 
-export type StudyItem = StudyInfo & {
+type RuntimeStudy = RuntimeOutputDataMap["studies"][number];
+
+export type StudyItem = RuntimeStudy & {
     host: SupportedHosts;
     siteName: SiteName;
     siteLabel: string;
     order: number;
     color: string | null;
+    normalizedReward: number | null;
+    normalizedRate: number | null;
 };
 
 export type SettingComponentProps = {

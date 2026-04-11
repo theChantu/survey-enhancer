@@ -4,10 +4,10 @@ import {
     type SupportedHosts,
 } from "@/adapters/siteConfigs";
 
-import type { RuntimeChannel, RuntimeDataMap } from "@/messages/types";
+import type { RuntimeChannel, RuntimeInputDataMap } from "@/messages/types";
 
 type RuntimeTabEntries<K extends RuntimeChannel> = Partial<
-    Record<number, RuntimeDataMap[K]>
+    Record<number, RuntimeInputDataMap[K]>
 >;
 
 export type RuntimeCache = {
@@ -18,7 +18,7 @@ export type RuntimeClearedChange = {
     [K in RuntimeChannel]: {
         channel: K;
         siteName: SiteName;
-        data: RuntimeDataMap[K] | null;
+        data: RuntimeInputDataMap[K] | null;
     };
 }[RuntimeChannel];
 
@@ -29,8 +29,8 @@ export function createRuntimeCache(): RuntimeCache {
 }
 
 function runtimeEquals<K extends RuntimeChannel>(
-    current: RuntimeDataMap[K] | undefined,
-    next: RuntimeDataMap[K],
+    current: RuntimeInputDataMap[K] | undefined,
+    next: RuntimeInputDataMap[K],
 ): boolean {
     return JSON.stringify(current ?? null) === JSON.stringify(next);
 }
@@ -48,7 +48,7 @@ function dedupeByKey<T, K>(items: T[], getKey: (item: T) => K): T[] {
 function aggregateRuntimeData<K extends RuntimeChannel>(
     channel: K,
     entries: RuntimeTabEntries<K> | undefined,
-): RuntimeDataMap[K] | null {
+): RuntimeInputDataMap[K] | null {
     if (!entries || Object.keys(entries).length === 0) return null;
 
     switch (channel) {
@@ -56,13 +56,13 @@ function aggregateRuntimeData<K extends RuntimeChannel>(
             return dedupeByKey(
                 Object.values(entries).flatMap((items) => items ?? []),
                 (study) => study.id,
-            ) as RuntimeDataMap[K];
+            );
     }
 }
 
 type UpdatedRuntimeData<K extends RuntimeChannel> = {
     changed: boolean;
-    data: RuntimeDataMap[K] | null;
+    data: RuntimeInputDataMap[K] | null;
 };
 
 export function updateRuntimeCache<K extends RuntimeChannel>(
@@ -70,7 +70,7 @@ export function updateRuntimeCache<K extends RuntimeChannel>(
     channel: K,
     siteName: SiteName,
     tabId: number,
-    data: RuntimeDataMap[K],
+    data: RuntimeInputDataMap[K],
 ): UpdatedRuntimeData<K> {
     const siteEntries = cache[channel][siteName] ?? {};
     const current = siteEntries[tabId];
@@ -95,7 +95,7 @@ export function readRuntimeCache<K extends RuntimeChannel>(
     cache: RuntimeCache,
     channel: K,
     siteName: SiteName,
-): RuntimeDataMap[K] | null {
+): RuntimeInputDataMap[K] | null {
     return aggregateRuntimeData(channel, cache[channel][siteName]);
 }
 

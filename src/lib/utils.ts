@@ -10,7 +10,12 @@ function extractSymbol(text: string) {
 }
 
 function getRandomTimeoutMs(min: number, max: number): number {
-    return (Math.floor(Math.random() * (max - min + 1)) + min) * 60 * 1000;
+    const lower = Math.min(min, max);
+    const upper = Math.max(min, max);
+
+    return (
+        Math.floor(Math.random() * (upper - lower + 1)) + lower
+    ) * 60 * 1000;
 }
 
 function scheduleTimeout(fn: () => void, delay = 300) {

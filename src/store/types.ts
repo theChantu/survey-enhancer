@@ -5,12 +5,17 @@ export type Enhancement = {
     revert(): void;
 };
 
-export type StudySort =
-    | "highest-reward"
-    | "lowest-reward"
-    | "highest-rate"
-    | "lowest-rate"
-    | "page-order";
+export const studySortOptions = [
+    "newest",
+    "oldest",
+    "highest-reward",
+    "lowest-reward",
+    "highest-hourly-rate",
+    "lowest-hourly-rate",
+    "page-order",
+] as const;
+
+export type StudySort = (typeof studySortOptions)[number];
 
 export type NotificationSound = "alert" | "bloop" | "chime";
 
