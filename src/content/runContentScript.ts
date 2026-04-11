@@ -11,7 +11,7 @@ import { getRuntimeSyncChannels } from "@/background/runtime/runtimeHelpers";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
 import type { ContentScriptContext } from "#imports";
-import type { DeepPartial, Settings, SiteSettings } from "@/store/types";
+import type { SiteSettings } from "@/store/types";
 import type { RuntimeChannel } from "@/messages/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
@@ -47,12 +47,10 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    async function runEnhancements(changed?: DeepPartial<Settings>) {
+    async function runEnhancements() {
         observer.disconnect();
         try {
-            if (changed) {
-                await enhancementHandler.update(changed);
-            }
+            await enhancementHandler.update({ ...globals, ...site });
             await enhancementHandler.run();
             await syncRuntime();
         } finally {
@@ -60,8 +58,8 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    const debounced = debounce(async (changed?: DeepPartial<Settings>) => {
-        await runEnhancements(changed);
+    const debounced = debounce(async () => {
+        await runEnhancements();
     }, 300);
 
     // Observe the DOM for changes and re-run the enhancements if necessary
@@ -152,7 +150,7 @@ async function runContentScript(ctx: ContentScriptContext) {
             }
         }
 
-        debounced(payload.data);
+        debounced();
     });
 
     onExtensionMessage("runtime-sync-request", async (payload) => {

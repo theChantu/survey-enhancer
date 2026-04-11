@@ -1,9 +1,9 @@
-import deepMerge from "../../lib/deepMerge";
 import {
     enhancementConfigs,
     type EnhancementKey,
 } from "@/enhancements/enhancementConfigs";
 import log from "@/lib/log";
+import deepMerge from "@/lib/deepMerge";
 
 import type { DeepPartial, Settings } from "@/store/types";
 import type { BaseAdapter } from "@/adapters";
