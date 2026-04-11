@@ -8,10 +8,11 @@ import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "@/constants";
 import { capitalize, cleanResearcherName } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { sites, type SupportedHosts } from "@/adapters/siteConfigs";
+import { playSound } from "@/lib/playSound";
 
 import type { StudyInfo } from "@/adapters/BaseAdapter";
 import type { MessageMap } from "@/messages/types";
-import type { GlobalSettings } from "@/store/types";
+import type { GlobalSettings, NotificationSound } from "@/store/types";
 
 export interface NotificationData {
     title: string;
@@ -40,6 +41,18 @@ async function ensureOffscreenDocument() {
         reasons: ["AUDIO_PLAYBACK"],
         justification: "Play alert sounds for new study notifications.",
     });
+}
+
+async function playNotificationSound(sound: NotificationSound, volume: number) {
+    if (import.meta.env.BROWSER === "firefox") {
+        await playSound({ type: sound, volume });
+    } else {
+        await ensureOffscreenDocument();
+        await sendExtensionMessage({
+            type: "play-sound",
+            data: { sound, volume },
+        });
+    }
 }
 
 type ProviderSendResult = {
@@ -255,14 +268,7 @@ export async function handleStudyAlert(
 
     if (sound.enabled) {
         try {
-            await ensureOffscreenDocument();
-            await sendExtensionMessage({
-                type: "play-sound",
-                data: {
-                    sound: sound.type,
-                    volume: sound.volume,
-                },
-            });
+            await playNotificationSound(sound.type, sound.volume);
         } catch (error) {
             console.error("Error playing sound:", error);
         }

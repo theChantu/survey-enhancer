@@ -25,6 +25,10 @@ type RuntimeStrategy<
         data: RuntimeInputDataMap[K],
         meta: RuntimeMetaMap[K] | undefined,
     ) => TOutput;
+    prune: (
+        meta: RuntimeMetaMap[K],
+        now: number,
+    ) => RuntimeMetaMap[K] | undefined;
 };
 
 type RuntimeStrategies = {
@@ -38,6 +42,8 @@ export type RuntimeMetaStore = Partial<{
 function defineRuntimeStrategies<T extends RuntimeStrategies>(strategies: T) {
     return strategies;
 }
+
+const STUDIES_META_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const runtimeChannelStrategies = defineRuntimeStrategies({
     studies: {
@@ -63,8 +69,21 @@ export const runtimeChannelStrategies = defineRuntimeStrategies({
                     lastSeenAt: seen?.lastSeenAt ?? 0,
                 };
             }),
+        prune: (meta, now) => {
+            const pruned = Object.fromEntries(
+                Object.entries(meta).filter(
+                    ([, entry]) => now - entry.lastSeenAt < STUDIES_META_TTL_MS,
+                ),
+            );
+
+            return Object.keys(pruned).length > 0 ? pruned : undefined;
+        },
     },
 });
+
+export const strategyChannels = Object.keys(
+    runtimeChannelStrategies,
+) as StrategyChannel[];
 
 export function hasRuntimeStrategy(
     channel: RuntimeChannel,

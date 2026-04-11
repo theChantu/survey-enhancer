@@ -11,8 +11,8 @@ import { getRuntimeSyncChannels } from "@/background/runtime/runtimeHelpers";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
 import type { ContentScriptContext } from "#imports";
-import type { SiteSettings } from "@/store/types";
-import type { RuntimeChannel } from "@/messages/types";
+import type { Settings, SiteSettings } from "@/store/types";
+import type { RuntimeChannel, StoreChangedMessage } from "@/messages/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
@@ -136,6 +136,10 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     initializeAutoReload(site.autoReload);
 
+    const irrelevantKeys: Set<Partial<keyof Settings>> = new Set([
+        "studyAlerts",
+    ]);
+
     onExtensionMessage("store-changed", (payload) => {
         if (payload.namespace === "globals") {
             globals = deepMerge(globals, payload.data);
@@ -148,6 +152,11 @@ async function runContentScript(ctx: ContentScriptContext) {
             if (payload.data.autoReload) {
                 updateAutoReload(previousAutoReload, site.autoReload);
             }
+
+            const keys = Object.keys(
+                payload.data,
+            ) as (keyof StoreChangedMessage["data"])[];
+            if (keys.every((key) => irrelevantKeys.has(key))) return;
         }
 
         debounced();

@@ -45,9 +45,7 @@ function whenReady(audio: HTMLAudioElement): Promise<HTMLAudioElement> {
     });
 }
 
-export async function playNotificationSound(
-    settings: SoundSettings,
-): Promise<void> {
+export async function playSound(settings: SoundSettings): Promise<void> {
     const { type, volume } = settings;
 
     const normalizedVolume = clampVolume(volume);

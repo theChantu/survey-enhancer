@@ -1,8 +1,8 @@
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
-import { playNotificationSound } from "@/lib/playNotificationSound";
+import { playSound } from "@/lib/playSound";
 
 onExtensionMessage("play-sound", async ({ sound, volume }) => {
-    await playNotificationSound({
+    await playSound({
         type: sound,
         volume: volume,
     });

@@ -11,7 +11,7 @@
         NotificationSound,
         SiteSettings,
     } from "@/store/types";
-    import { playNotificationSound } from "@/lib/playNotificationSound";
+    import { playSound } from "@/lib/playSound";
 
     import type { NotificationSettingsModel } from "../../types";
 
@@ -83,7 +83,7 @@
             },
         });
 
-        void playNotificationSound({
+        void playSound({
             type: model.notifications.delivery.sound.type,
             volume: value,
         });
@@ -101,7 +101,7 @@
             },
         });
 
-        void playNotificationSound({
+        void playSound({
             type: value,
             volume: model.notifications.delivery.sound.volume,
         });

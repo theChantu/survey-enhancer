@@ -120,11 +120,17 @@ export function registerRuntimeSync(): void {
 
         const retainSiteName = getListingsSiteName(changeInfo.url);
         void clearRuntimeForTab(tabId, retainSiteName);
+
+        if (retainSiteName !== null) {
+            void browser.tabs.update(tabId, { autoDiscardable: false });
+        }
     });
 
     onExtensionMessage("runtime-sync", async (payload, sender) => {
         const tabId = sender.tab?.id;
         if (tabId === undefined) return;
+
+        void browser.tabs.update(tabId, { autoDiscardable: false });
 
         const result = updateRuntimeCache(
             runtimeCache,
