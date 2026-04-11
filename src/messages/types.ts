@@ -13,7 +13,7 @@ import type {
 } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { StudyInfo } from "@/adapters/BaseAdapter";
-import type { NotificationData } from "@/enhancements/NotificationsEnhancement";
+import type { NotificationData } from "@/background/handlers/handleNotifications";
 import type { NetworkRequestEvent } from "@/events/network";
 
 type GlobalsTarget<TData> = {
@@ -63,6 +63,12 @@ export interface StoreMutationMessage {
 }
 
 export type StoreMutationMessageType = keyof StoreMutationMessage;
+
+export type StudiesDetectedMessage = {
+    siteName: SiteName;
+    studies: StudyInfo[];
+    hidden: boolean;
+};
 
 export type NotificationMessage = {
     siteName: SiteName;
@@ -130,6 +136,7 @@ export interface MessageMap extends StoreMutationMessage {
     fetch: { url: string };
     network: NetworkRequestEvent;
     "play-sound": PlaySoundMessage;
+    "studies-detected": StudiesDetectedMessage;
     "study-alert": NotificationMessage;
     "study-completion": { siteName: SiteName; url: string };
 }
@@ -146,6 +153,7 @@ export interface ResponseMap {
     fetch: unknown;
     network: void;
     "play-sound": void;
+    "studies-detected": void;
     "study-alert": boolean;
     "study-completion": void;
 }

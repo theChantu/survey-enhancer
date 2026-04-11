@@ -4,12 +4,21 @@ import {
     ProviderConfigMap,
     type ProviderName,
 } from "@/providers/providers";
-import { NotificationData } from "@/enhancements/NotificationsEnhancement";
-import { capitalize } from "@/lib/utils";
+import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "@/constants";
+import { capitalize, cleanResearcherName } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
+import { sites, type SupportedHosts } from "@/adapters/siteConfigs";
 
+import type { StudyInfo } from "@/adapters/BaseAdapter";
 import type { MessageMap } from "@/messages/types";
 import type { GlobalSettings } from "@/store/types";
+
+export interface NotificationData {
+    title: string;
+    message: string;
+    iconUrl?: string;
+    link?: string;
+}
 
 const notificationActions = new Map<string, () => void | Promise<void>>();
 
@@ -117,6 +126,118 @@ async function sendBrowserNotifications(
     }
 
     return sent;
+}
+
+const siteHostByName = Object.fromEntries(
+    Object.entries(sites).map(([host, config]) => [config.name, host]),
+) as Record<string, SupportedHosts>;
+
+function getSiteIconUrl(siteName: string): string | undefined {
+    const host = siteHostByName[siteName];
+    if (!host) return undefined;
+    const config = sites[host];
+    return `https://${host}${config.iconPath}`;
+}
+
+function buildNotification(
+    study: StudyInfo,
+    siteName: string,
+): NotificationData {
+    const { title, reward, rate, symbol, link } = study;
+
+    const rewardText =
+        reward !== null
+            ? `${symbol ?? ""}${reward.toFixed(2)}`
+            : "Unknown reward";
+    const rateText =
+        rate !== null ? `${symbol ?? ""}${rate.toFixed(2)}/hr` : "Unknown rate";
+
+    const siteLabel = capitalize(siteName);
+
+    return {
+        title: title ?? siteLabel,
+        message: `${siteLabel} • ${rewardText} • ${rateText}`,
+        iconUrl: getSiteIconUrl(siteName),
+        link: link ?? undefined,
+    };
+}
+
+export async function handleStudiesDetected(
+    store: SettingsStore,
+    payload: MessageMap["studies-detected"],
+): Promise<void> {
+    const { siteName, studies, hidden } = payload;
+    if (studies.length === 0) return;
+
+    const siteStore = store.sites.entry(siteName);
+    const now = Date.now();
+
+    let newStudies: StudyInfo[] = [];
+    let included: string[] = [];
+    let excluded: string[] = [];
+
+    await siteStore.update((current) => {
+        const { cache } = current.studyAlerts;
+        included = current.studyAlerts.included;
+        excluded = current.studyAlerts.excluded;
+
+        newStudies = studies.filter((s) => !(s.id in cache.studies));
+        if (newStudies.length === 0) return {};
+
+        const nextStudyCache = { ...cache.studies };
+        for (const [key, timestamp] of Object.entries(nextStudyCache)) {
+            if (now - timestamp >= NOTIFY_TTL_MS) delete nextStudyCache[key];
+        }
+        for (const study of newStudies) {
+            nextStudyCache[study.id] = now;
+        }
+
+        const nextResearcherCache = { ...cache.researchers };
+        for (const [name, timestamp] of Object.entries(nextResearcherCache)) {
+            if (now - timestamp >= NAME_CACHE_TTL_MS)
+                delete nextResearcherCache[name];
+        }
+        for (const study of newStudies) {
+            if (!study.researcher) continue;
+            const name = cleanResearcherName(study.researcher);
+            if (!(name in cache.researchers)) nextResearcherCache[name] = now;
+        }
+
+        return {
+            studyAlerts: {
+                cache: {
+                    studies: nextStudyCache,
+                    researchers: nextResearcherCache,
+                },
+            },
+        };
+    });
+
+    if (newStudies.length === 0) return;
+
+    if (!hidden) return;
+
+    const includedSet = new Set(included);
+    const excludedSet = new Set(excluded);
+
+    const notifications: NotificationData[] = [];
+    for (const study of newStudies) {
+        const { researcher } = study;
+        if (!researcher) continue;
+        const cleaned = cleanResearcherName(researcher);
+
+        if (excludedSet.has(cleaned)) continue;
+        if (includedSet.size > 0 && !includedSet.has(cleaned)) continue;
+
+        notifications.push(buildNotification(study, siteName));
+    }
+
+    if (notifications.length === 0) return;
+
+    await handleStudyAlert(store, {
+        siteName,
+        notifications,
+    });
 }
 
 export async function handleStudyAlert(

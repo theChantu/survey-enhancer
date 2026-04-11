@@ -8,6 +8,7 @@ import {
     handleNotificationClicked,
     handleNotificationClosed,
     handleStudyAlert,
+    handleStudiesDetected,
 } from "./handlers/handleNotifications";
 import {
     isSupportedHostTabUrl,
@@ -17,8 +18,12 @@ import { parseJsonRequestBody } from "./network/requestBody";
 import { registerRuntimeSync } from "./runtime/runtimeSync";
 import { safeSendPageMessage } from "./utils/safeSendPageMessage";
 import { safeSendTabMessage } from "./utils/safeSendTabMessage";
+import { delay } from "@/lib/delay";
 
 import type { Message } from "@/messages/types";
+
+const RUNTIME_SYNC_REQUEST_RETRY_DELAY_MS = 750;
+const RUNTIME_SYNC_REQUEST_ATTEMPTS = 2;
 
 function runBackgroundScript() {
     const store = new SettingsStore();
@@ -99,22 +104,36 @@ function runBackgroundScript() {
 
     registerRuntimeSync();
 
-    async function requestRunTimeSync() {
-        const tabs = await browser.tabs.query({});
+    async function requestRuntimeSync() {
+        const channels = getRuntimeSyncChannels();
 
-        for (const tab of tabs) {
-            if (!tab.id || !isSupportedHostTabUrl(tab.url)) continue;
+        for (
+            let attempt = 0;
+            attempt < RUNTIME_SYNC_REQUEST_ATTEMPTS;
+            attempt++
+        ) {
+            const tabs = await browser.tabs.query({});
 
-            await safeSendTabMessage(tab.id, {
-                type: "runtime-sync-request",
-                data: {
-                    channels: getRuntimeSyncChannels(),
-                },
-            });
+            for (const tab of tabs) {
+                if (!tab.id || !isSupportedHostTabUrl(tab.url)) continue;
+
+                await safeSendTabMessage(tab.id, {
+                    type: "runtime-sync-request",
+                    data: { channels },
+                });
+            }
+
+            if (attempt < RUNTIME_SYNC_REQUEST_ATTEMPTS - 1) {
+                await delay(RUNTIME_SYNC_REQUEST_RETRY_DELAY_MS);
+            }
         }
     }
 
-    void requestRunTimeSync();
+    void requestRuntimeSync();
+
+    onExtensionMessage("studies-detected", (payload) =>
+        handleStudiesDetected(store, payload),
+    );
 
     onExtensionMessage("study-alert", (payload) =>
         handleStudyAlert(store, payload),

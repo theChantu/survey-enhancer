@@ -50,8 +50,8 @@
             StudySort,
             (left: StudyItem, right: StudyItem) => number
         > = {
-            newest: (left, right) => right.firstSeenAt - left.firstSeenAt,
-            oldest: (left, right) => left.firstSeenAt - right.firstSeenAt,
+            "first-seen": (left, right) => right.firstSeenAt - left.firstSeenAt,
+            "last-seen": (left, right) => left.firstSeenAt - right.firstSeenAt,
             "highest-reward": (left, right) =>
                 compareNullableNumbers(
                     left.normalizedReward,

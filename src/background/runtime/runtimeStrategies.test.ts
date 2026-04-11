@@ -132,6 +132,42 @@ describe("runtimeStrategies", () => {
         ]);
     });
 
+    it("reuses persisted firstSeenAt when runtime meta is reloaded after a restart", () => {
+        const persistedRuntimeMeta = {
+            studies: {
+                prolific: {
+                    "study-a": {
+                        firstSeenAt: 100,
+                        lastSeenAt: 100,
+                    },
+                },
+            },
+        };
+
+        const enriched = enrichRuntimeData(
+            persistedRuntimeMeta,
+            "studies",
+            "prolific",
+            [
+                {
+                    id: "study-a",
+                    title: "Study A",
+                    researcher: "Researcher A",
+                    reward: 1,
+                    rate: 12,
+                    link: "https://app.prolific.com/studies/a",
+                    symbol: "$",
+                },
+            ],
+        );
+
+        expect(enriched[0]).toMatchObject({
+            id: "study-a",
+            firstSeenAt: 100,
+            lastSeenAt: 100,
+        });
+    });
+
     it("clears per-site metadata and removes the channel bucket when empty", () => {
         const runtimeMeta = {};
 

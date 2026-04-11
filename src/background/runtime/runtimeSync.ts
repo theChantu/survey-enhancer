@@ -15,6 +15,11 @@ import {
     updateRuntimeMeta,
     type RuntimeMetaStore,
 } from "./runtimeStrategies";
+import {
+    loadRuntimeMetaStore,
+    pruneRuntimeMeta,
+    saveRuntimeMetaStore,
+} from "./runtimeMetaStore";
 
 import type { SiteName } from "@/adapters/siteConfigs";
 import type {
@@ -40,16 +45,26 @@ async function broadcastRuntimeChanged<K extends RuntimeChannel>(
 
 export function registerRuntimeSync(): void {
     const runtimeCache = createRuntimeCache();
-    const runtimeMeta: RuntimeMetaStore = {};
+    let runtimeMeta: RuntimeMetaStore = {};
 
-    function syncRuntimeMeta<K extends RuntimeChannel>(
+    const runtimeMetaReady = (async () => {
+        const stored = await loadRuntimeMetaStore();
+        runtimeMeta = pruneRuntimeMeta(stored, Date.now());
+        await saveRuntimeMetaStore(runtimeMeta);
+    })();
+
+    async function syncRuntimeMeta<K extends RuntimeChannel>(
         channel: K,
         siteName: SiteName,
         data: RuntimeInputDataMap[K],
-    ): void {
+    ): Promise<void> {
+        await runtimeMetaReady;
+
         if (!hasRuntimeStrategy(channel)) return;
 
         updateRuntimeMeta(runtimeMeta, channel, siteName, data, Date.now());
+        runtimeMeta = pruneRuntimeMeta(runtimeMeta, Date.now());
+        await saveRuntimeMetaStore(runtimeMeta);
     }
 
     function getRuntimeOutput<K extends RuntimeChannel>(
@@ -66,11 +81,15 @@ export function registerRuntimeSync(): void {
         tabId: number,
         retainSiteName: SiteName | null = null,
     ): Promise<void> {
+        await runtimeMetaReady;
+
         const changes = clearRuntimeTab(runtimeCache, tabId, retainSiteName);
+        let metaChanged = false;
 
         for (const change of changes) {
             if (change.data === null && hasRuntimeStrategy(change.channel)) {
                 clearRuntimeMeta(runtimeMeta, change.channel, change.siteName);
+                metaChanged = true;
             }
 
             await broadcastRuntimeChanged(
@@ -82,8 +101,13 @@ export function registerRuntimeSync(): void {
                           change.channel,
                           change.siteName,
                           change.data,
-                      ),
+                ),
             );
+        }
+
+        if (metaChanged) {
+            runtimeMeta = pruneRuntimeMeta(runtimeMeta, Date.now());
+            await saveRuntimeMetaStore(runtimeMeta);
         }
     }
 
@@ -110,7 +134,7 @@ export function registerRuntimeSync(): void {
             payload.data,
         );
 
-        syncRuntimeMeta(payload.channel, payload.siteName, payload.data);
+        await syncRuntimeMeta(payload.channel, payload.siteName, payload.data);
 
         if (!result.changed || result.data === null) return;
 
@@ -127,7 +151,9 @@ export function registerRuntimeSync(): void {
         );
     });
 
-    onExtensionMessage("runtime-fetch", (payload) => {
+    onExtensionMessage("runtime-fetch", async (payload) => {
+        await runtimeMetaReady;
+
         const data = readRuntimeCache(
             runtimeCache,
             payload.channel,

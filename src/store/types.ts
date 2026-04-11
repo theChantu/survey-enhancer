@@ -6,8 +6,8 @@ export type Enhancement = {
 };
 
 export const studySortOptions = [
-    "newest",
-    "oldest",
+    "first-seen",
+    "last-seen",
     "highest-reward",
     "lowest-reward",
     "highest-hourly-rate",
