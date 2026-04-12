@@ -108,6 +108,10 @@ Contributions are welcome! Feel free to open an issue or submit a pull request.
 3. Make your changes
 4. Open a pull request against `main`
 
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md) for details on how the extension handles your data.
+
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
