@@ -102,7 +102,7 @@ function runBackgroundScript() {
         handleNotificationClosed(id),
     );
 
-    registerRuntimeSync();
+    registerRuntimeSync(store);
 
     async function requestRuntimeSync() {
         const channels = getRuntimeSyncChannels();

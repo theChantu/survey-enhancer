@@ -21,6 +21,8 @@ export type StudySort = (typeof studySortOptions)[number];
 
 export type NotificationSound = "alert" | "bloop" | "chime";
 
+type Date = ReturnType<typeof Date.now>;
+
 interface StudyAlerts {
     studyAlerts: {
         cache: {
@@ -39,7 +41,7 @@ interface Analytics {
         bestDailyStudyCompletions: number;
         previousDailyStudyCompletions: number;
         dailyStudyCompletions: {
-            timestamp: ReturnType<typeof Date.now>;
+            timestamp: Date;
             count: number;
         };
     };
@@ -86,6 +88,7 @@ export interface GlobalSettings extends EnhancementSettings {
         enabled: boolean;
     };
     idleThreshold: number;
+    lastPopupOpenedAt: number;
     providers: Partial<ProviderConfigMap>;
     studySort: StudySort;
 }

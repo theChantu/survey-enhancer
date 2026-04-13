@@ -98,3 +98,7 @@ export type AnalyticsModel = SiteSettings["analytics"];
 export type StudiesTabModel = SettingComponentProps & {};
 
 export type SettingsTabModel = SettingComponentProps & {};
+
+export type StudyCardModel = {
+    item: StudyItem;
+};

@@ -1,17 +1,13 @@
 <script lang="ts">
     import { DEVICE_META, PERIPHERAL_META } from "../lib/capabilitiesMeta";
     import { formatDuration, formatValue } from "../lib/formatters";
-    import { nowState } from "../now.svelte";
-    import { NEW_STUDY_THRESHOLD_MS } from "@/constants";
+    import { lastOpenedAt } from "../popupSession.svelte";
 
-    import type { StudyItem } from "../types";
+    import type { StudyCardModel } from "../types";
 
-    let { item }: { item: StudyItem } = $props();
+    let { item }: StudyCardModel = $props();
 
-    const isNew = $derived(
-        item.firstSeenAt > 0 &&
-            nowState.value - item.firstSeenAt < NEW_STUDY_THRESHOLD_MS,
-    );
+    const isNew = $derived(item.firstSeenAt > lastOpenedAt);
 
     const title = $derived(item.title ?? "Untitled study");
     const researcher = $derived(item.researcher ?? "Researcher unavailable");

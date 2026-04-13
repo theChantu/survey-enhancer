@@ -20,7 +20,9 @@ import {
     pruneRuntimeMeta,
     saveRuntimeMetaStore,
 } from "./runtimeMetaStore";
+import { createBadgeSync } from "./badgeSync";
 
+import type { SettingsStore } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type {
     RuntimeChannel,
@@ -43,7 +45,7 @@ async function broadcastRuntimeChanged<K extends RuntimeChannel>(
     });
 }
 
-export function registerRuntimeSync(): void {
+export function registerRuntimeSync(store: SettingsStore): void {
     const runtimeCache = createRuntimeCache();
     let runtimeMeta: RuntimeMetaStore = {};
 
@@ -52,6 +54,12 @@ export function registerRuntimeSync(): void {
         runtimeMeta = pruneRuntimeMeta(stored, Date.now());
         await saveRuntimeMetaStore(runtimeMeta);
     })();
+
+    const badgeSync = createBadgeSync(
+        store,
+        () => runtimeCache,
+        () => runtimeMeta,
+    );
 
     async function syncRuntimeMeta<K extends RuntimeChannel>(
         channel: K,
@@ -101,7 +109,7 @@ export function registerRuntimeSync(): void {
                           change.channel,
                           change.siteName,
                           change.data,
-                ),
+                      ),
             );
         }
 
@@ -109,6 +117,8 @@ export function registerRuntimeSync(): void {
             runtimeMeta = pruneRuntimeMeta(runtimeMeta, Date.now());
             await saveRuntimeMetaStore(runtimeMeta);
         }
+
+        void badgeSync.recompute();
     }
 
     browser.tabs.onRemoved.addListener((tabId) => {
@@ -141,6 +151,8 @@ export function registerRuntimeSync(): void {
         );
 
         await syncRuntimeMeta(payload.channel, payload.siteName, payload.data);
+
+        void badgeSync.recompute();
 
         if (!result.changed || result.data === null) return;
 

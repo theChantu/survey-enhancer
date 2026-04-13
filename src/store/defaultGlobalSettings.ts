@@ -32,6 +32,7 @@ const defaultGlobalSettings = Object.freeze({
         enabled: true,
     },
     idleThreshold: 15 * 60,
+    lastPopupOpenedAt: 0,
     providers: {},
     notifications: {
         enabled: true,

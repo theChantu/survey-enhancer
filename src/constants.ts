@@ -6,4 +6,3 @@ export const CONVERSION_RATES_FETCH_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 
 export const MIN_AMOUNT_PER_HOUR = 7; // Minimum amount before red highlight
 export const MAX_AMOUNT_PER_HOUR = 15; // Maximum amount before green highlight
 export const HIGHLIGHT_BASE_CURRENCY: Currency = "USD";
-export const NEW_STUDY_THRESHOLD_MS = 90 * 1000;

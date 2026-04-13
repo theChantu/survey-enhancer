@@ -12,7 +12,7 @@ import {
     defaultSiteSettingsKeys,
 } from "@/store/defaultSiteSettings";
 import { runtimeState, settingsState, uiState } from "./state.svelte";
-import { nowState, startNowTicker } from "./now.svelte";
+import { captureAndUpdateLastOpened } from "./popupSession.svelte";
 
 import type {
     Message,
@@ -176,6 +176,8 @@ async function initializePopup() {
         loadSite(uiState.selectedHost),
         loadAllRuntimeState(),
     ]);
+
+    captureAndUpdateLastOpened();
 }
 
 export function initPopup() {
@@ -189,11 +191,11 @@ export function initPopup() {
 
     void initializePopup();
 
-    const stopNowTicker = startNowTicker();
+    const presencePort = browser.runtime.connect({ name: "popup" });
 
     return () => {
         unsubscribeStore();
         unsubscribeRuntime();
-        stopNowTicker();
+        presencePort.disconnect();
     };
 }
