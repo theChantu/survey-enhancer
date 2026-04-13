@@ -16,10 +16,21 @@ export function createBadgeSync(
     let lastPopupOpenedAt = 0;
     let popupOpen = false;
 
-    const ready = (async () => {
-        const globals = await store.globals.get(["lastPopupOpenedAt"]);
-        lastPopupOpenedAt = globals.lastPopupOpenedAt;
-    })();
+    let badgeSyncReady: Promise<void> | null = null;
+
+    function ensureBadgeSync() {
+        badgeSyncReady ??= (async () => {
+            try {
+                const globals = await store.globals.get(["lastPopupOpenedAt"]);
+                lastPopupOpenedAt = globals.lastPopupOpenedAt;
+            } catch (error) {
+                lastPopupOpenedAt = 0;
+                console.error("Error initializing badge sync:", error);
+            }
+        })();
+
+        return badgeSyncReady;
+    }
 
     store.globals.subscribe((changed) => {
         if (changed.lastPopupOpenedAt === undefined) return;
@@ -66,7 +77,7 @@ export function createBadgeSync(
     }
 
     async function recompute(): Promise<void> {
-        await ready;
+        ensureBadgeSync();
         await setBadgeCount(countNewStudies());
     }
 

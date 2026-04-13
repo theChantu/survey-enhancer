@@ -44,15 +44,65 @@ async function broadcastRuntimeChanged<K extends RuntimeChannel>(
     });
 }
 
+function isMissingTabError(error: unknown): boolean {
+    return (
+        error instanceof Error &&
+        (error.message.includes("Invalid tab ID") ||
+            error.message.includes("No tab with id") ||
+            error.message.includes("tab not found"))
+    );
+}
+
+async function keepTabLoaded(tabId: number): Promise<void> {
+    try {
+        await browser.tabs.update(tabId, { autoDiscardable: false });
+    } catch (error) {
+        if (!isMissingTabError(error)) {
+            console.error("Error disabling tab discarding:", error);
+        }
+    }
+}
+
 export function registerRuntimeSync(store: SettingsStore): void {
     const runtimeCache = createRuntimeCache();
     let runtimeMeta: RuntimeMetaStore = {};
+    let runtimeMetaReady: Promise<void> | null = null;
 
-    const runtimeMetaReady = (async () => {
-        const stored = await loadRuntimeMetaStore();
-        runtimeMeta = pruneRuntimeMeta(stored, Date.now());
-        await saveRuntimeMetaStore(runtimeMeta);
-    })();
+    let pendingRuntimeTask = Promise.resolve();
+
+    async function runSerializedTask<TResult>(
+        task: () => Promise<TResult>,
+    ): Promise<TResult> {
+        const previous = pendingRuntimeTask;
+        let release!: () => void;
+
+        pendingRuntimeTask = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+
+        await previous;
+
+        try {
+            return await task();
+        } finally {
+            release();
+        }
+    }
+
+    async function ensureRuntimeMeta() {
+        runtimeMetaReady ??= (async () => {
+            try {
+                const stored = await loadRuntimeMetaStore();
+                runtimeMeta = pruneRuntimeMeta(stored, Date.now());
+                await saveRuntimeMetaStore(runtimeMeta);
+            } catch (error) {
+                runtimeMeta = {};
+                console.error("Error initializing runtime metadata:", error);
+            }
+        })();
+
+        return runtimeMetaReady;
+    }
 
     const badgeSync = createBadgeSync(
         store,
@@ -60,18 +110,31 @@ export function registerRuntimeSync(store: SettingsStore): void {
         () => runtimeMeta,
     );
 
+    function queueRuntimeTask(task: () => Promise<void>): void {
+        void runSerializedTask(task).catch((error) => {
+            console.error("Error processing runtime task:", error);
+        });
+    }
+
     async function syncRuntimeMeta<K extends RuntimeChannel>(
         channel: K,
         siteName: SiteName,
         data: RuntimeInputDataMap[K],
     ): Promise<void> {
-        await runtimeMetaReady;
+        await ensureRuntimeMeta();
 
         if (!hasRuntimeStrategy(channel)) return;
 
-        updateRuntimeMeta(runtimeMeta, channel, siteName, data, Date.now());
-        runtimeMeta = pruneRuntimeMeta(runtimeMeta, Date.now());
-        await saveRuntimeMetaStore(runtimeMeta);
+        const now = Date.now();
+
+        updateRuntimeMeta(runtimeMeta, channel, siteName, data, now);
+        runtimeMeta = pruneRuntimeMeta(runtimeMeta, now);
+
+        try {
+            await saveRuntimeMetaStore(runtimeMeta);
+        } catch (error) {
+            console.error("Error saving runtime metadata:", error);
+        }
     }
 
     function getRuntimeOutput<K extends RuntimeChannel>(
@@ -88,7 +151,7 @@ export function registerRuntimeSync(store: SettingsStore): void {
         tabId: number,
         retainSiteName: SiteName | null = null,
     ): Promise<void> {
-        await runtimeMetaReady;
+        await ensureRuntimeMeta();
 
         const changes = clearRuntimeTab(runtimeCache, tabId, retainSiteName);
 
@@ -110,17 +173,21 @@ export function registerRuntimeSync(store: SettingsStore): void {
     }
 
     browser.tabs.onRemoved.addListener((tabId) => {
-        void clearRuntimeForTab(tabId);
+        queueRuntimeTask(async () => {
+            await clearRuntimeForTab(tabId);
+        });
     });
 
     browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
         if (changeInfo.url === undefined) return;
 
         const retainSiteName = getListingsSiteName(changeInfo.url);
-        void clearRuntimeForTab(tabId, retainSiteName);
+        queueRuntimeTask(async () => {
+            await clearRuntimeForTab(tabId, retainSiteName);
+        });
 
         if (retainSiteName !== null) {
-            void browser.tabs.update(tabId, { autoDiscardable: false });
+            void keepTabLoaded(tabId);
         }
     });
 
@@ -128,50 +195,64 @@ export function registerRuntimeSync(store: SettingsStore): void {
         const tabId = sender.tab?.id;
         if (tabId === undefined) return;
 
-        void browser.tabs.update(tabId, { autoDiscardable: false });
+        void keepTabLoaded(tabId);
 
-        const result = updateRuntimeCache(
-            runtimeCache,
-            payload.channel,
-            payload.siteName,
-            tabId,
-            payload.data,
-        );
+        await runSerializedTask(async () => {
+            const result = updateRuntimeCache(
+                runtimeCache,
+                payload.channel,
+                payload.siteName,
+                tabId,
+                payload.data,
+            );
 
-        await syncRuntimeMeta(payload.channel, payload.siteName, payload.data);
+            await syncRuntimeMeta(
+                payload.channel,
+                payload.siteName,
+                payload.data,
+            );
 
-        void badgeSync.recompute();
+            void badgeSync.recompute();
 
-        if (!result.changed || result.data === null) return;
+            if (!result.changed || result.data === null) return;
 
-        await broadcastRuntimeChanged(
-            payload.channel,
-            payload.siteName,
-            structuredClone(
-                getRuntimeOutput(
+            await broadcastRuntimeChanged(
+                payload.channel,
+                payload.siteName,
+                structuredClone(
+                    getRuntimeOutput(
+                        payload.channel,
+                        payload.siteName,
+                        result.data,
+                    ),
+                ),
+            );
+        });
+    });
+
+    onExtensionMessage(
+        "runtime-fetch",
+        async (payload) =>
+            await runSerializedTask(async () => {
+                await ensureRuntimeMeta();
+
+                const data = readRuntimeCache(
+                    runtimeCache,
                     payload.channel,
                     payload.siteName,
-                    result.data,
-                ),
-            ),
-        );
-    });
+                );
+                if (data === null) return null;
 
-    onExtensionMessage("runtime-fetch", async (payload) => {
-        await runtimeMetaReady;
-
-        const data = readRuntimeCache(
-            runtimeCache,
-            payload.channel,
-            payload.siteName,
-        );
-        if (data === null) return null;
-
-        return {
-            ...payload,
-            data: structuredClone(
-                getRuntimeOutput(payload.channel, payload.siteName, data),
-            ),
-        };
-    });
+                return {
+                    ...payload,
+                    data: structuredClone(
+                        getRuntimeOutput(
+                            payload.channel,
+                            payload.siteName,
+                            data,
+                        ),
+                    ),
+                };
+            }),
+    );
 }
