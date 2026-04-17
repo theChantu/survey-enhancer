@@ -1,13 +1,13 @@
 <script lang="ts">
     import { DEVICE_META, PERIPHERAL_META } from "../lib/capabilitiesMeta";
     import { formatDuration, formatValue } from "../lib/formatters";
-    import { sessionSeenAt } from "../popupSession.svelte";
+    import { popupSession } from "../popupSession.svelte";
 
     import type { StudyCardModel } from "../types";
 
     let { item }: StudyCardModel = $props();
 
-    const isNew = $derived(item.firstSeenAt > sessionSeenAt);
+    const isNew = $derived(item.firstSeenAt > popupSession.seenAt);
 
     const title = $derived(item.title ?? "Untitled study");
     const researcher = $derived(item.researcher ?? "Researcher unavailable");

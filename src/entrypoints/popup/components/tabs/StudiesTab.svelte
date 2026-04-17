@@ -51,7 +51,7 @@
             (left: StudyItem, right: StudyItem) => number
         > = {
             "first-seen": (left, right) => right.firstSeenAt - left.firstSeenAt,
-            "last-seen": (left, right) => left.firstSeenAt - right.firstSeenAt,
+            "last-seen": (left, right) => right.lastSeenAt - left.lastSeenAt,
             "highest-reward": (left, right) =>
                 compareNullableNumbers(
                     left.normalizedReward,

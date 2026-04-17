@@ -3,7 +3,7 @@ import { settingsState } from "./state.svelte";
 
 import type { RuntimeChangedMessage } from "@/messages/types";
 
-export let sessionSeenAt = Date.now();
+export let popupSession = $state({ seenAt: Date.now(), ready: false });
 
 function persistSeenAt(now: number): void {
     settingsState.globals.lastPopupOpenedAt = now;
@@ -14,22 +14,16 @@ function persistSeenAt(now: number): void {
 }
 
 export function beginPopupSession(): void {
-    sessionSeenAt = settingsState.globals.lastPopupOpenedAt;
+    popupSession.seenAt = settingsState.globals.lastPopupOpenedAt;
+    popupSession.ready = true;
     persistSeenAt(Date.now());
 }
 
-function markSessionSeenNow(): void {
-    const now = Date.now();
-    sessionSeenAt = now;
-    persistSeenAt(now);
-}
-
-export function acknowledgeRuntimeChange(
-    payload: RuntimeChangedMessage,
-): void {
+export function acknowledgeRuntimeChange(payload: RuntimeChangedMessage): void {
+    if (!popupSession.ready) return;
     if (payload.channel !== "studies" || payload.data === null) return;
 
-    if (payload.data.some((study) => study.firstSeenAt > sessionSeenAt)) {
-        markSessionSeenNow();
+    if (payload.data.some((study) => study.firstSeenAt > popupSession.seenAt)) {
+        persistSeenAt(Date.now());
     }
 }
