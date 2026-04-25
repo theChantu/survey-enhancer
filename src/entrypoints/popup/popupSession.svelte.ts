@@ -21,9 +21,14 @@ export function beginPopupSession(): void {
 
 export function acknowledgeRuntimeChange(payload: RuntimeChangedMessage): void {
     if (!popupSession.ready) return;
-    if (payload.channel !== "studies" || payload.data === null) return;
+    if (payload.channel !== "opportunities" || payload.data === null) return;
 
-    if (payload.data.some((study) => study.firstSeenAt > popupSession.seenAt)) {
+    if (
+        payload.data.some(
+            (opportunity) =>
+                opportunity.lastAlertableChangeAt > popupSession.seenAt,
+        )
+    ) {
         persistSeenAt(Date.now());
     }
 }

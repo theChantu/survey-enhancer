@@ -11,7 +11,9 @@ export type SettingsState = {
     sites: Partial<Record<SupportedHosts, SiteSettings>>;
 };
 
-export type PopupTab = "studies" | "settings";
+export const tabs = ["opportunities", "settings"] as const;
+
+export type PopupTab = (typeof tabs)[number];
 
 export type UiState = {
     selectedHost: SupportedHosts;
@@ -31,9 +33,9 @@ export type ActiveSiteState = {
     settings?: SiteSettings;
 };
 
-type RuntimeStudy = RuntimeOutputDataMap["studies"][number];
+type RuntimeOpportunity = RuntimeOutputDataMap["opportunities"][number];
 
-export type StudyItem = RuntimeStudy & {
+export type OpportunityItem = RuntimeOpportunity & {
     host: SupportedHosts;
     siteName: SiteName;
     siteLabel: string;
@@ -43,6 +45,9 @@ export type StudyItem = RuntimeStudy & {
     normalizedRate: number | null;
     matchesAlertRules: boolean;
 };
+
+export type StudyItem = Extract<OpportunityItem, { kind: "study" }>;
+export type ProjectItem = Extract<OpportunityItem, { kind: "project" }>;
 
 export type SettingComponentProps = {
     activeSite: ActiveSiteState;
@@ -72,7 +77,7 @@ export type CurrencySettingsModel = SiteMutationModel & {
 
 export type NotificationSettingsModel = SiteMutationModel & {
     notifications: GlobalSettings["notifications"];
-    studyAlerts: SiteSettings["studyAlerts"];
+    opportunityAlerts: SiteSettings["opportunityAlerts"];
 };
 
 export type ProviderSettingsModel = GlobalMutationModel & {

@@ -8,17 +8,17 @@ import {
     updateRuntimeCache,
 } from "../runtimeCache";
 
-import { createStudy } from "./utils";
+import { createProject, createStudy } from "./utils";
 
 describe("runtimeCache", () => {
     it("does not report a change when the same tab syncs identical studies", () => {
         const cache = createRuntimeCache();
         const studies = [createStudy("a")];
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, studies);
+        updateRuntimeCache(cache, "opportunities", "prolific", 1, studies);
         const result = updateRuntimeCache(
             cache,
-            "studies",
+            "opportunities",
             "prolific",
             1,
             studies,
@@ -31,14 +31,22 @@ describe("runtimeCache", () => {
     it("aggregates studies across tabs for the same site", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
-
-        const result = updateRuntimeCache(cache, "studies", "prolific", 2, [
-            createStudy("b", {
-                reward: 2,
-                rate: 14,
-            }),
+        updateRuntimeCache(cache, "opportunities", "prolific", 1, [
+            createStudy("a"),
         ]);
+
+        const result = updateRuntimeCache(
+            cache,
+            "opportunities",
+            "prolific",
+            2,
+            [
+                createStudy("b", {
+                    reward: 2,
+                    rate: 14,
+                }),
+            ],
+        );
 
         expect(result.changed).toBe(true);
         expect(result.data?.map((study) => study.id)).toEqual(["a", "b"]);
@@ -47,7 +55,7 @@ describe("runtimeCache", () => {
     it("deduplicates studies by id when multiple tabs report the same study", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [
+        updateRuntimeCache(cache, "opportunities", "prolific", 1, [
             createStudy("shared", {
                 title: "Study A",
                 researcher: "Researcher A",
@@ -55,7 +63,7 @@ describe("runtimeCache", () => {
             }),
         ]);
 
-        const result = updateRuntimeCache(cache, "studies", "prolific", 2, [
+        const result = updateRuntimeCache(cache, "opportunities", "prolific", 2, [
             createStudy("shared", {
                 title: "Study A (updated)",
                 researcher: "Researcher A",
@@ -69,28 +77,50 @@ describe("runtimeCache", () => {
         expect(result.data?.[0]?.title).toBe("Study A (updated)");
     });
 
+    it("does not deduplicate different opportunity kinds with the same id", () => {
+        const cache = createRuntimeCache();
+
+        const result = updateRuntimeCache(
+            cache,
+            "opportunities",
+            "prolific",
+            1,
+            [createStudy("shared"), createProject("shared")],
+        );
+
+        expect(result.data).toHaveLength(2);
+        expect(result.data?.map((item) => `${item.kind}:${item.id}`)).toEqual([
+            "study:shared",
+            "project:shared",
+        ]);
+    });
+
     it("clears runtime data when a tab is removed", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
+        updateRuntimeCache(cache, "opportunities", "prolific", 1, [
+            createStudy("a"),
+        ]);
 
         const changes = clearRuntimeTab(cache, 1);
 
         expect(changes).toEqual([
             {
-                channel: "studies",
+                channel: "opportunities",
                 siteName: "prolific",
                 data: null,
             },
         ]);
-        expect(readRuntimeCache(cache, "studies", "prolific")).toBeNull();
+        expect(readRuntimeCache(cache, "opportunities", "prolific")).toBeNull();
     });
 
     it("returns the remaining aggregated studies when one of multiple tabs is removed", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
-        updateRuntimeCache(cache, "studies", "prolific", 2, [
+        updateRuntimeCache(cache, "opportunities", "prolific", 1, [
+            createStudy("a"),
+        ]);
+        updateRuntimeCache(cache, "opportunities", "prolific", 2, [
             createStudy("b", {
                 reward: 2,
                 rate: 14,
@@ -101,7 +131,7 @@ describe("runtimeCache", () => {
 
         expect(changes).toEqual([
             {
-                channel: "studies",
+                channel: "opportunities",
                 siteName: "prolific",
                 data: [
                     createStudy("b", {
@@ -112,7 +142,7 @@ describe("runtimeCache", () => {
             },
         ]);
         expect(
-            readRuntimeCache(cache, "studies", "prolific")?.map(
+            readRuntimeCache(cache, "opportunities", "prolific")?.map(
                 (study) => study.id,
             ),
         ).toEqual(["b"]);
@@ -121,7 +151,9 @@ describe("runtimeCache", () => {
     it("keeps current listing data during same-site listing navigation", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
+        updateRuntimeCache(cache, "opportunities", "prolific", 1, [
+            createStudy("a"),
+        ]);
 
         const changes = clearRuntimeTab(
             cache,
@@ -130,7 +162,9 @@ describe("runtimeCache", () => {
         );
 
         expect(changes).toEqual([]);
-        expect(readRuntimeCache(cache, "studies", "prolific")).not.toBeNull();
+        expect(
+            readRuntimeCache(cache, "opportunities", "prolific"),
+        ).not.toBeNull();
     });
 
     it("detects non-listings pages as not retaining runtime data", () => {

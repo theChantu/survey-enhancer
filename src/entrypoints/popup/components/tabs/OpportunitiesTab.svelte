@@ -2,6 +2,7 @@
     import { ExternalLink, LoaderCircle } from "@lucide/svelte";
     import SelectControl from "@/components/SelectControl.svelte";
     import Analytics from "../Analytics.svelte";
+    import ProjectCard from "../ProjectCard.svelte";
     import StudyCard from "../StudyCard.svelte";
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
     import { runtimeState, settingsState, uiState } from "../../state.svelte";
@@ -18,7 +19,7 @@
     } from "@/store/types";
     import { HIGHLIGHT_BASE_CURRENCY } from "@/constants";
 
-    import type { StudyItem, StudiesTabModel } from "../../types";
+    import type { OpportunityItem, StudiesTabModel } from "../../types";
     import type { StudyInfo } from "@/adapters/BaseAdapter";
 
     let { model }: { model: StudiesTabModel } = $props();
@@ -45,49 +46,60 @@
         return direction === "asc" ? left - right : right - left;
     }
 
-    function sortStudies(items: StudyItem[], sort: StudySort): StudyItem[] {
+    function sortOpportunities(
+        items: OpportunityItem[],
+        sort: StudySort,
+    ): OpportunityItem[] {
         const sorted = [...items];
 
         const sorters: Record<
             StudySort,
-            (left: StudyItem, right: StudyItem) => number
+            (left: OpportunityItem, right: OpportunityItem) => number
         > = {
             "first-seen": (left, right) => right.firstSeenAt - left.firstSeenAt,
             "last-seen": (left, right) => right.lastSeenAt - left.lastSeenAt,
             "highest-reward": (left, right) =>
                 compareNullableNumbers(
-                    left.normalizedReward,
-                    right.normalizedReward,
+                    left.kind === "study" ? left.normalizedReward : null,
+                    right.kind === "study" ? right.normalizedReward : null,
                     "desc",
                 ),
             "lowest-reward": (left, right) =>
                 compareNullableNumbers(
-                    left.normalizedReward,
-                    right.normalizedReward,
+                    left.kind === "study" ? left.normalizedReward : null,
+                    right.kind === "study" ? right.normalizedReward : null,
                     "asc",
                 ),
             "highest-hourly-rate": (left, right) =>
                 compareNullableNumbers(
-                    left.normalizedRate,
-                    right.normalizedRate,
+                    left.kind === "study" ? left.normalizedRate : null,
+                    right.kind === "study" ? right.normalizedRate : null,
                     "desc",
                 ),
             "lowest-hourly-rate": (left, right) =>
                 compareNullableNumbers(
-                    left.normalizedRate,
-                    right.normalizedRate,
+                    left.kind === "study" ? left.normalizedRate : null,
+                    right.kind === "study" ? right.normalizedRate : null,
                     "asc",
                 ),
             quickest: (left, right) =>
                 compareNullableNumbers(
-                    left.averageCompletionMinutes,
-                    right.averageCompletionMinutes,
+                    left.kind === "study"
+                        ? left.averageCompletionMinutes
+                        : null,
+                    right.kind === "study"
+                        ? right.averageCompletionMinutes
+                        : null,
                     "asc",
                 ),
             longest: (left, right) =>
                 compareNullableNumbers(
-                    left.averageCompletionMinutes,
-                    right.averageCompletionMinutes,
+                    left.kind === "study"
+                        ? left.averageCompletionMinutes
+                        : null,
+                    right.kind === "study"
+                        ? right.averageCompletionMinutes
+                        : null,
                     "desc",
                 ),
             "page-order": (left, right) => left.order - right.order,
@@ -173,10 +185,11 @@
         const currencies = new Set<Currency>();
 
         for (const host of supportedHosts) {
-            const hostStudies = runtimeState.studies[host];
-            if (!hostStudies) continue;
+            const hostOpportunities = runtimeState.opportunities[host];
+            if (!hostOpportunities) continue;
 
-            for (const study of hostStudies) {
+            for (const study of hostOpportunities) {
+                if (study.kind !== "study") continue;
                 if (!study.symbol) continue;
 
                 const currency = getCurrency(study.symbol);
@@ -243,17 +256,35 @@
         void updateConversionRates(currenciesNeedingRates, snapshot);
     });
 
-    const studies: StudyItem[] = $derived.by(() => {
-        const items: StudyItem[] = [];
+    const opportunities: OpportunityItem[] = $derived.by(() => {
+        const items: OpportunityItem[] = [];
         let order = 0;
 
         for (const host of supportedHosts) {
-            const hostStudies = runtimeState.studies[host];
-            if (!Array.isArray(hostStudies)) continue;
+            const hostOpportunities = runtimeState.opportunities[host];
+            if (!Array.isArray(hostOpportunities)) continue;
 
-            const rules = settingsState.sites[host]?.studyAlerts.rules;
+            const rules = settingsState.sites[host]?.opportunityAlerts.rules;
 
-            for (const study of hostStudies) {
+            for (const opportunity of hostOpportunities) {
+                if (opportunity.kind === "project") {
+                    items.push({
+                        ...opportunity,
+                        host,
+                        siteName: sites[host].name,
+                        siteLabel: capitalize(sites[host].name),
+                        order,
+                        color: null,
+                        normalizedReward: null,
+                        normalizedRate: null,
+                        matchesAlertRules:
+                            !rules || matchesAlertRules(opportunity, rules),
+                    });
+                    order += 1;
+                    continue;
+                }
+
+                const study = opportunity;
                 const display = convertStudyDisplayValues(study);
 
                 items.push({
@@ -297,25 +328,29 @@
     let studySort = $derived(settingsState.globals.studySort);
 
     const loading = $derived(
-        supportedHosts.some((host) => runtimeState.studies[host] === undefined),
+        supportedHosts.some(
+            (host) => runtimeState.opportunities[host] === undefined,
+        ),
     );
     const hasLiveSnapshot = $derived(
         supportedHosts.some((host) =>
-            Array.isArray(runtimeState.studies[host]),
+            Array.isArray(runtimeState.opportunities[host]),
         ),
     );
 
-    const sortedStudies = $derived(sortStudies(studies, studySort));
+    const sortedOpportunities = $derived(
+        sortOpportunities(opportunities, studySort),
+    );
     const emptyMessage = $derived.by(() => {
         if (loading) {
-            return "Looking for live studies across your synced tabs.";
+            return "Looking for live opportunities across your synced tabs.";
         }
 
         if (!hasLiveSnapshot) {
             return "Open a study listings page to start syncing.";
         }
 
-        return "No studies are currently available in the synced tabs.";
+        return "No opportunities are currently available in the synced tabs.";
     });
 </script>
 
@@ -326,7 +361,7 @@
         </div>
     {/if}
 
-    {#if sortedStudies.length > 0}
+    {#if sortedOpportunities.length > 0}
         <div class="shrink-0 px-4">
             <SelectControl
                 value={studySort}
@@ -341,7 +376,7 @@
     {/if}
 
     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {#if sortedStudies.length > 0}
+        {#if sortedOpportunities.length > 0}
             {#if loading}
                 <div
                     class="flex items-center gap-2 px-4 pt-3 text-xs text-popup-text-faint"
@@ -355,8 +390,12 @@
             {/if}
 
             <div class="popup-studies-list flex flex-col gap-3 pl-4 pb-4">
-                {#each sortedStudies as study (study.siteName + ":" + study.id)}
-                    <StudyCard item={study} />
+                {#each sortedOpportunities as opportunity (opportunity.siteName + ":" + opportunity.kind + ":" + opportunity.id)}
+                    {#if opportunity.kind === "study"}
+                        <StudyCard item={opportunity} />
+                    {:else}
+                        <ProjectCard item={opportunity} />
+                    {/if}
                 {/each}
             </div>
         {:else}

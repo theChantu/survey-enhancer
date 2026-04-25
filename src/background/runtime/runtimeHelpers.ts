@@ -2,7 +2,7 @@ import { sites, type SupportedHosts } from "@/adapters/siteConfigs";
 import type { RuntimeChannel } from "@/messages/types";
 
 export const runtimeChannels = [
-    "studies",
+    "opportunities",
 ] as const satisfies readonly RuntimeChannel[];
 
 export function getRuntimeSyncChannels(

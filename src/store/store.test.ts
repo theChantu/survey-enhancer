@@ -131,25 +131,29 @@ describe("site", () => {
 
         await store.sites.entry(siteName).patch({
             autoReload: { enabled: true },
-            studyAlerts: {
+            opportunityAlerts: {
                 cache: {
-                    studies: {
-                        studyA: 100,
+                    opportunities: {
+                        "study:studyA": {
+                            notifiedAt: 100,
+                            fingerprint: "present",
+                            availableStudyCount: null,
+                        },
                     },
                 },
             },
         });
 
         await store.sites.entry(siteName).set({
-            studyAlerts: defaultSiteSettings.studyAlerts,
+            opportunityAlerts: defaultSiteSettings.opportunityAlerts,
         });
 
-        const { autoReload, studyAlerts } = await store.sites
+        const { autoReload, opportunityAlerts } = await store.sites
             .entry(siteName)
-            .get(["autoReload", "studyAlerts"]);
+            .get(["autoReload", "opportunityAlerts"]);
 
         expect(autoReload.enabled).toBe(true);
-        expect(studyAlerts).toEqual(defaultSiteSettings.studyAlerts);
+        expect(opportunityAlerts).toEqual(defaultSiteSettings.opportunityAlerts);
     });
 
     it("isolates sites from each other", async () => {
@@ -207,10 +211,14 @@ describe("site", () => {
         const store = new SettingsStore();
 
         await store.sites.entry(siteName).patch({
-            studyAlerts: {
+            opportunityAlerts: {
                 cache: {
-                    studies: {
-                        studyA: 100,
+                    opportunities: {
+                        "study:studyA": {
+                            notifiedAt: 100,
+                            fingerprint: "present",
+                            availableStudyCount: null,
+                        },
                     },
                     researchers: {
                         researcherA: 100,
@@ -220,10 +228,14 @@ describe("site", () => {
         });
 
         await store.sites.entry(siteName).patch({
-            studyAlerts: {
+            opportunityAlerts: {
                 cache: {
-                    studies: {
-                        studyB: 200,
+                    opportunities: {
+                        "study:studyB": {
+                            notifiedAt: 200,
+                            fingerprint: "present",
+                            availableStudyCount: null,
+                        },
                     },
                     researchers: {
                         researcherB: 200,
@@ -232,14 +244,18 @@ describe("site", () => {
             },
         });
 
-        const { studyAlerts } = await store.sites
+        const { opportunityAlerts } = await store.sites
             .entry(siteName)
-            .get(["studyAlerts"]);
+            .get(["opportunityAlerts"]);
 
-        expect(studyAlerts.cache.studies.studyA).toBe(100);
-        expect(studyAlerts.cache.studies.studyB).toBe(200);
-        expect(studyAlerts.cache.researchers.researcherA).toBe(100);
-        expect(studyAlerts.cache.researchers.researcherB).toBe(200);
+        expect(
+            opportunityAlerts.cache.opportunities["study:studyA"].notifiedAt,
+        ).toBe(100);
+        expect(
+            opportunityAlerts.cache.opportunities["study:studyB"].notifiedAt,
+        ).toBe(200);
+        expect(opportunityAlerts.cache.researchers.researcherA).toBe(100);
+        expect(opportunityAlerts.cache.researchers.researcherB).toBe(200);
     });
 
     it("notifies subscribers on site set and patch", async () => {

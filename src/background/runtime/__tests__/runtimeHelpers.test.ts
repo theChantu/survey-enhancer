@@ -11,7 +11,9 @@ describe("runtimeSync helpers", () => {
     });
 
     it("returns explicitly requested runtime channels as-is", () => {
-        expect(getRuntimeSyncChannels(["studies"])).toEqual(["studies"]);
+        expect(getRuntimeSyncChannels(["opportunities"])).toEqual([
+            "opportunities",
+        ]);
     });
 
     it("detects supported host tab urls", () => {

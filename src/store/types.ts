@@ -24,10 +24,17 @@ export type NotificationSound = "alert" | "bloop" | "chime";
 
 type Date = ReturnType<typeof Date.now>;
 
-interface StudyAlerts {
-    studyAlerts: {
+interface OpportunityAlerts {
+    opportunityAlerts: {
         cache: {
-            studies: Record<string, number>;
+            opportunities: Record<
+                string,
+                {
+                    notifiedAt: number;
+                    fingerprint: string;
+                    availableStudyCount: number | null;
+                }
+            >;
             researchers: Record<string, number>;
             titles: Record<string, number>;
         };
@@ -58,7 +65,7 @@ interface ReloadSettings {
 
 type SharedEnhancementSettings<T> = { enabled: boolean } & T;
 
-export type SiteSettings = StudyAlerts & ReloadSettings & Analytics;
+export type SiteSettings = OpportunityAlerts & ReloadSettings & Analytics;
 
 export interface EnhancementSettings {
     notifications: Omit<

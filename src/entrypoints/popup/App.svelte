@@ -5,7 +5,7 @@
     import { settingsState, uiState } from "./state.svelte";
     import { initPopup } from "./popupModel.svelte";
     import SettingsTab from "./components/tabs/SettingsTab.svelte";
-    import StudiesTab from "./components/tabs/StudiesTab.svelte";
+    import OpportunitiesTab from "./components/tabs/OpportunitiesTab.svelte";
     import TabBar from "./components/TabBar.svelte";
 
     import type { ActiveSiteState } from "./types";
@@ -24,8 +24,8 @@
         <TabBar />
     </div>
 
-    {#if uiState.selectedTab === "studies"}
-        <StudiesTab
+    {#if uiState.selectedTab === "opportunities"}
+        <OpportunitiesTab
             model={{
                 activeSite,
             }}

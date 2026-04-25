@@ -77,12 +77,13 @@
                 />
             {/if}
 
-            {#if siteEnhancements.has("studyAlerts")}
+            {#if siteEnhancements.has("opportunityAlerts")}
                 <NotificationSettings
                     model={{
                         queueMutation,
                         siteName: model.activeSite.name,
-                        studyAlerts: model.activeSite.settings.studyAlerts,
+                        opportunityAlerts:
+                            model.activeSite.settings.opportunityAlerts,
                         notifications: settingsState.globals.notifications,
                     }}
                 />

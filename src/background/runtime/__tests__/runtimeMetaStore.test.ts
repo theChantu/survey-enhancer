@@ -19,11 +19,14 @@ describe("runtimeMetaStore", () => {
 
     it("persists and loads runtime meta", async () => {
         const runtimeMeta = {
-            studies: {
+            opportunities: {
                 prolific: {
-                    "study-a": {
+                    "study:study-a": {
                         firstSeenAt: 100,
                         lastSeenAt: 200,
+                        lastChangedAt: 100,
+                        lastAlertableChangeAt: 100,
+                        fingerprint: "present",
                     },
                 },
             },
@@ -36,26 +39,35 @@ describe("runtimeMetaStore", () => {
 
     it("prunes entries older than the ttl by lastSeenAt", () => {
         const runtimeMeta = {
-            studies: {
+            opportunities: {
                 prolific: {
                     stale: {
                         firstSeenAt: 100,
                         lastSeenAt: 100,
+                        lastChangedAt: 100,
+                        lastAlertableChangeAt: 100,
+                        fingerprint: "present",
                     },
                     fresh: {
                         firstSeenAt: 200,
                         lastSeenAt: 2_592_000_001,
+                        lastChangedAt: 200,
+                        lastAlertableChangeAt: 200,
+                        fingerprint: "present",
                     },
                 },
             },
         };
 
         expect(pruneRuntimeMeta(runtimeMeta, 2_592_000_101)).toEqual({
-            studies: {
+            opportunities: {
                 prolific: {
                     fresh: {
                         firstSeenAt: 200,
                         lastSeenAt: 2_592_000_001,
+                        lastChangedAt: 200,
+                        lastAlertableChangeAt: 200,
+                        fingerprint: "present",
                     },
                 },
             },

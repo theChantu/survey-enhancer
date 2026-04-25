@@ -12,6 +12,7 @@ import type { StudyInfo } from "@/adapters/BaseAdapter";
 function study(overrides: Partial<StudyInfo> = {}): StudyInfo {
     return {
         id: "study-a",
+        kind: "study",
         title: "Memory and attention",
         researcher: "Research Lab",
         reward: 4,

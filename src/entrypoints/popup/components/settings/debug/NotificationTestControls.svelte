@@ -22,7 +22,7 @@
     ): Promise<boolean> {
         try {
             return await sendExtensionMessage({
-                type: "study-alert",
+                type: "opportunity-alert",
                 data: {
                     siteName: activeSite.name,
                     notifications: [

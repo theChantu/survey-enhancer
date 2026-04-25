@@ -2,15 +2,14 @@
     import { supportedHosts } from "@/adapters/siteConfigs";
     import { capitalize } from "@/lib/utils";
     import { runtimeState, uiState } from "../state.svelte";
+    import { tabs } from "../types";
 
-    import type { PopupTab } from "../types";
-
-    const tabs = ["studies", "settings"] as const satisfies PopupTab[];
-
-    const studyCount = $derived(
+    const opportunityCount = $derived(
         supportedHosts.reduce((sum, host) => {
-            const studies = runtimeState.studies[host];
-            return sum + (Array.isArray(studies) ? studies.length : 0);
+            const opportunities = runtimeState.opportunities[host];
+            return (
+                sum + (Array.isArray(opportunities) ? opportunities.length : 0)
+            );
         }, 0),
     );
 </script>
@@ -27,11 +26,11 @@
             onclick={() => (uiState.selectedTab = tab)}
         >
             {capitalize(tab)}
-            {#if tab === "studies" && studyCount > 0}
+            {#if tab === "opportunities" && opportunityCount > 0}
                 <span
                     class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-popup-accent-surface-strong px-1.5 py-0.5 text-xs font-semibold leading-none text-popup-accent-text"
                 >
-                    {studyCount}
+                    {opportunityCount}
                 </span>
             {/if}
         </button>

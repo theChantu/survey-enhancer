@@ -1,4 +1,9 @@
 import type { SiteName } from "@/adapters/siteConfigs";
+import {
+    getOpportunityFingerprint,
+    getOpportunityKey,
+    isOpportunityAlertable,
+} from "@/lib/opportunities";
 import type {
     RuntimeChannel,
     RuntimeInputDataMap,
@@ -7,7 +12,7 @@ import type {
 } from "@/messages/types";
 
 export type RuntimeMetaMap = {
-    studies: Record<string, RuntimeSeenMeta>;
+    opportunities: Record<string, RuntimeSeenMeta>;
 };
 
 type StrategyChannel = keyof RuntimeMetaMap & RuntimeChannel;
@@ -43,36 +48,80 @@ function defineRuntimeStrategies<T extends RuntimeStrategies>(strategies: T) {
     return strategies;
 }
 
-const STUDIES_META_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const OPPORTUNITIES_META_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function isAlertableOpportunityChange(
+    opportunity: RuntimeInputDataMap["opportunities"][number],
+    current: RuntimeSeenMeta | undefined,
+): boolean {
+    if (!current) return isOpportunityAlertable(opportunity);
+    if (opportunity.kind !== "project") return false;
+
+    const currentCount = opportunity.availableStudyCount;
+    if (currentCount === null || currentCount <= 0) return false;
+
+    const previousCount = Number(current.fingerprint);
+    return !Number.isFinite(previousCount) || currentCount > previousCount;
+}
 
 export const runtimeChannelStrategies = defineRuntimeStrategies({
-    studies: {
-        updateMeta: (studies, meta, now) => {
+    opportunities: {
+        updateMeta: (opportunities, meta, now) => {
             const next = { ...(meta ?? {}) };
 
-            for (const study of studies) {
-                const current = next[study.id];
-                next[study.id] = current
-                    ? { ...current, lastSeenAt: now }
-                    : { firstSeenAt: now, lastSeenAt: now };
+            for (const opportunity of opportunities) {
+                const key = getOpportunityKey(opportunity);
+                const current = next[key];
+                const fingerprint = getOpportunityFingerprint(opportunity);
+                const changed = current?.fingerprint !== fingerprint;
+
+                next[key] = current
+                    ? {
+                          ...current,
+                          lastSeenAt: now,
+                          lastChangedAt: changed
+                              ? now
+                              : current.lastChangedAt,
+                          lastAlertableChangeAt:
+                              changed &&
+                              isAlertableOpportunityChange(opportunity, current)
+                                  ? now
+                                  : current.lastAlertableChangeAt,
+                          fingerprint,
+                      }
+                    : {
+                          firstSeenAt: now,
+                          lastSeenAt: now,
+                          lastChangedAt: now,
+                          lastAlertableChangeAt: isOpportunityAlertable(
+                              opportunity,
+                          )
+                              ? now
+                              : 0,
+                          fingerprint,
+                      };
             }
 
             return next;
         },
-        enrich: (studies, meta) =>
-            studies.map((study) => {
-                const seen = meta?.[study.id];
+        enrich: (opportunities, meta) =>
+            opportunities.map((opportunity) => {
+                const seen = meta?.[getOpportunityKey(opportunity)];
 
                 return {
-                    ...study,
+                    ...opportunity,
                     firstSeenAt: seen?.firstSeenAt ?? 0,
                     lastSeenAt: seen?.lastSeenAt ?? 0,
+                    lastChangedAt: seen?.lastChangedAt ?? 0,
+                    lastAlertableChangeAt: seen?.lastAlertableChangeAt ?? 0,
+                    fingerprint: seen?.fingerprint ?? "",
                 };
             }),
         prune: (meta, now) => {
             const pruned = Object.fromEntries(
                 Object.entries(meta).filter(
-                    ([, entry]) => now - entry.lastSeenAt < STUDIES_META_TTL_MS,
+                    ([, entry]) =>
+                        now - entry.lastSeenAt < OPPORTUNITIES_META_TTL_MS,
                 ),
             );
 

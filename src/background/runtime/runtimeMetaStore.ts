@@ -10,8 +10,7 @@ const RUNTIME_META_STORAGE_KEY = "local:runtime:meta";
 
 export async function loadRuntimeMetaStore(): Promise<RuntimeMetaStore> {
     return (
-        (await storage.getItem<RuntimeMetaStore>(RUNTIME_META_STORAGE_KEY)) ??
-        {}
+        (await storage.getItem<RuntimeMetaStore>(RUNTIME_META_STORAGE_KEY)) ?? {}
     );
 }
 

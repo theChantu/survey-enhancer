@@ -9,11 +9,11 @@ export const settingsState: SettingsState = $state({
 });
 
 export const runtimeState: RuntimeState = $state({
-    studies: {},
+    opportunities: {},
 });
 
 export const uiState: UiState = $state({
     selectedHost: supportedHosts[0],
-    selectedTab: "studies",
+    selectedTab: "opportunities",
     detectedHost: null,
 });

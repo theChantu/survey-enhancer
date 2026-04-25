@@ -29,19 +29,33 @@ export type AdapterConfig<H extends SupportedHosts = SupportedHosts> =
 
 export interface CurrencyInfo {}
 
-export interface StudyInfo {
+export type OpportunityKind = "study" | "project";
+
+export interface BaseOpportunityInfo {
     id: string;
+    kind: OpportunityKind;
     title: string | null;
+    link: string | null;
+}
+
+export interface StudyInfo extends BaseOpportunityInfo {
+    kind: "study";
     researcher: string | null;
     reward: number | null;
     rate: number | null;
-    link: string | null;
     symbol: string | null;
     devices: StudyDevice[];
     peripherals: StudyPeripheral[];
     averageCompletionMinutes: number | null;
     slots: number | null;
 }
+
+export interface ProjectInfo extends BaseOpportunityInfo {
+    kind: "project";
+    availableStudyCount: number | null;
+}
+
+export type OpportunityInfo = StudyInfo | ProjectInfo;
 
 interface RewardState {
     element: HTMLElement;
@@ -58,7 +72,7 @@ export const DataAttr = {
     ORIGINAL_SYMBOL: "data-original-symbol",
 } as const;
 
-type Source = "original" | "display";
+export type Source = "original" | "display";
 
 function matchesRequestBody(
     matcher: NetworkRequestBodyMatcher | undefined,
@@ -290,6 +304,7 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
 
         return {
             id,
+            kind: "study",
             title: this.getStudyTitle(el),
             researcher: this.getStudyResearcher(el),
             reward: rewardEl ? this.getValue(rewardEl, source) : null,
@@ -318,6 +333,10 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         }
 
         return studies;
+    }
+
+    extractOpportunities(source: Source = "original"): OpportunityInfo[] {
+        return this.extractStudies(source);
     }
 
     protected handleDomMutation(mutations: MutationRecord[]) {}

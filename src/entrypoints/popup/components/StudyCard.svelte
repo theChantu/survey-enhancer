@@ -8,7 +8,8 @@
     let { item }: StudyCardModel = $props();
 
     const highlighted = $derived(
-        item.firstSeenAt > popupSession.seenAt && item.matchesAlertRules,
+        item.lastAlertableChangeAt > popupSession.seenAt &&
+            item.matchesAlertRules,
     );
 
     const title = $derived(item.title ?? "Untitled study");

@@ -3,9 +3,9 @@ import { defaultAlertRules } from "@/lib/notifications/defaultAlertRules";
 import type { SiteSettings } from "./types";
 
 const defaultSiteSettings = Object.freeze({
-    studyAlerts: {
+    opportunityAlerts: {
         cache: {
-            studies: {},
+            opportunities: {},
             researchers: {},
             titles: {},
         },

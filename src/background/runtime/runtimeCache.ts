@@ -3,6 +3,7 @@ import {
     type SiteName,
     type SupportedHosts,
 } from "@/adapters/siteConfigs";
+import { getOpportunityKey } from "@/lib/opportunities";
 
 import type { RuntimeChannel, RuntimeInputDataMap } from "@/messages/types";
 
@@ -24,7 +25,7 @@ export type RuntimeClearedChange = {
 
 export function createRuntimeCache(): RuntimeCache {
     return {
-        studies: {},
+        opportunities: {},
     };
 }
 
@@ -52,10 +53,10 @@ function aggregateRuntimeData<K extends RuntimeChannel>(
     if (!entries || Object.keys(entries).length === 0) return null;
 
     switch (channel) {
-        case "studies":
+        case "opportunities":
             return dedupeByKey(
                 Object.values(entries).flatMap((items) => items ?? []),
-                (study) => study.id,
+                getOpportunityKey,
             );
     }
 }

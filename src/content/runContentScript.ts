@@ -31,7 +31,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     async function syncRuntime(channels?: RuntimeChannel[]) {
         for (const channel of getRuntimeSyncChannels(channels)) {
             switch (channel) {
-                case "studies":
+                case "opportunities":
                     if (!adapter.isListingsPage()) continue;
 
                     await sendExtensionMessage({
@@ -39,7 +39,7 @@ async function runContentScript(ctx: ContentScriptContext) {
                         data: {
                             channel,
                             siteName: adapter.config.name,
-                            data: adapter.extractStudies(),
+                            data: adapter.extractOpportunities(),
                         },
                     });
                     break;
@@ -137,7 +137,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     initializeAutoReload(site.autoReload);
 
     const irrelevantKeys: Set<Partial<keyof Settings>> = new Set([
-        "studyAlerts",
+        "opportunityAlerts",
     ]);
 
     onExtensionMessage("store-changed", (payload) => {

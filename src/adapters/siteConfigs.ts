@@ -17,7 +17,7 @@ export const sites = {
         name: "prolific",
         studyPath: "/studies",
         iconPath: "/apple-touch-icon.png",
-        enhancements: ["currency", "highlightRates", "studyAlerts"],
+        enhancements: ["currency", "highlightRates", "opportunityAlerts"],
         watchedRequestTargets: ["internal-api.prolific.com/api/v1"],
         networkPatterns: {
             studyCompletion: [
@@ -45,7 +45,7 @@ export const sites = {
             page: 1,
             size: 100,
         },
-        enhancements: ["currency", "highlightRates", "studyAlerts"],
+        enhancements: ["currency", "highlightRates", "opportunityAlerts"],
         watchedRequestTargets: ["connect.cloudresearch.com/participant-api"],
         networkPatterns: {
             studyCompletion: [

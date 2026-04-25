@@ -23,8 +23,9 @@
     let { model }: { model: NotificationSettingsModel } = $props();
 
     let ruleSuggestions = $derived({
-        researcher: Object.keys(model.studyAlerts.cache.researchers),
-        title: Object.keys(model.studyAlerts.cache.titles),
+        kind: ["study", "project"],
+        researcher: Object.keys(model.opportunityAlerts.cache.researchers),
+        title: Object.keys(model.opportunityAlerts.cache.titles),
     });
 
     const notificationSounds = [
@@ -45,19 +46,19 @@
     }
 
     function patchSiteNotifications(
-        data: DeepPartial<SiteSettings["studyAlerts"]>,
+        data: DeepPartial<SiteSettings["opportunityAlerts"]>,
     ) {
         void model.queueMutation("store-patch", {
             namespace: "sites",
             entry: model.siteName,
             data: {
-                studyAlerts: data,
+                opportunityAlerts: data,
             },
         });
     }
 
     function updateRuleGroup(key: keyof AlertRules, group: AlertRuleGroup) {
-        const rules = $state.snapshot(model.studyAlerts.rules);
+        const rules = $state.snapshot(model.opportunityAlerts.rules);
 
         patchSiteNotifications({
             rules: {
@@ -106,12 +107,12 @@
 
 <Section title="Alerts" icon={Bell}>
     <ToggleControl
-        title="New study alerts"
-        description={`Get notified when a new study shows up. Applies to ${capitalize(model.siteName)} only.`}
-        value={model.studyAlerts.enabled}
+        title="Opportunity alerts"
+        description={`Get notified when a new opportunity appears or changes. Applies to ${capitalize(model.siteName)} only.`}
+        value={model.opportunityAlerts.enabled}
         onClick={() =>
             patchSiteNotifications({
-                enabled: !model.studyAlerts.enabled,
+                enabled: !model.opportunityAlerts.enabled,
             })}
     >
         {#snippet children()}
@@ -177,14 +178,14 @@
             </ToggleControl>
             <AlertRuleGroupEditor
                 title="Notify when"
-                group={model.studyAlerts.rules.include}
-                emptyLabel="All new studies"
+                group={model.opportunityAlerts.rules.include}
+                emptyLabel="All new opportunities"
                 suggestions={ruleSuggestions}
                 onChange={(group) => updateRuleGroup("include", group)}
             />
             <AlertRuleGroupEditor
                 title="Never notify when"
-                group={model.studyAlerts.rules.exclude}
+                group={model.opportunityAlerts.rules.exclude}
                 emptyLabel="No exclusions"
                 suggestions={ruleSuggestions}
                 onChange={(group) => updateRuleGroup("exclude", group)}

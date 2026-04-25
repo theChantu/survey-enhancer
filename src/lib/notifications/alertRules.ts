@@ -1,44 +1,25 @@
-import type { StudyInfo } from "@/adapters/BaseAdapter";
+import { alertRuleFieldConfig } from "./alertRuleFieldConfig";
 
-export const alertRuleFields = [
-    "title",
-    "researcher",
-    "reward",
-    "rate",
-    "slots",
-    "averageCompletionMinutes",
-] as const;
-
-export type AlertRuleField = (typeof alertRuleFields)[number];
+import type { OpportunityInfo } from "@/adapters/BaseAdapter";
 
 export type AlertRuleFieldType = "text" | "number";
 
-export const alertRuleFieldLabels = {
-    title: "Study title",
-    researcher: "Researcher",
-    reward: "Reward",
-    rate: "Hourly rate",
-    slots: "Slots",
-    averageCompletionMinutes: "Avg completion (mins)",
-} as const satisfies Record<AlertRuleField, string>;
+export type AlertRuleField = keyof typeof alertRuleFieldConfig;
 
-const alertRuleFieldTypes = {
-    title: "text",
-    researcher: "text",
-    reward: "number",
-    rate: "number",
-    slots: "number",
-    averageCompletionMinutes: "number",
-} as const satisfies Record<AlertRuleField, AlertRuleFieldType>;
+export const alertRuleFields = Object.keys(
+    alertRuleFieldConfig,
+) as AlertRuleField[];
 
-export const alertRuleFieldPlaceholders = {
-    title: "e.g. Study",
-    researcher: "e.g. University of Oxford",
-    reward: "e.g. 2.50",
-    rate: "e.g. 12.00",
-    slots: "e.g. 10",
-    averageCompletionMinutes: "e.g. 5",
-} as const satisfies Record<AlertRuleField, string>;
+export const alertRuleFieldLabels = Object.fromEntries(
+    alertRuleFields.map((field) => [field, alertRuleFieldConfig[field].label]),
+) as Record<AlertRuleField, string>;
+
+export const alertRuleFieldPlaceholders = Object.fromEntries(
+    alertRuleFields.map((field) => [
+        field,
+        alertRuleFieldConfig[field].placeholder,
+    ]),
+) as Record<AlertRuleField, string>;
 
 export const textAlertRuleOperators = [
     "contains",
@@ -97,7 +78,7 @@ function isAlertRuleField(field: string): field is AlertRuleField {
 export function getAlertRuleFieldType(
     field: AlertRuleField,
 ): AlertRuleFieldType {
-    return alertRuleFieldTypes[field];
+    return alertRuleFieldConfig[field].type;
 }
 
 export function getAlertRuleOperators(
@@ -118,8 +99,7 @@ function normalizeText(value: string): string {
     return value.trim().toLowerCase();
 }
 
-const completeNumberPattern =
-    /^[+-]?(?:\d+|\d+\.\d+|\.\d+)(?:[eE][+-]?\d+)?$/;
+const completeNumberPattern = /^[+-]?(?:\d+|\d+\.\d+|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 function coerceText(value: AlertCondition["value"]): string | null {
     if (!value) return null;
@@ -128,7 +108,9 @@ function coerceText(value: AlertCondition["value"]): string | null {
     return normalized.length > 0 ? normalized : null;
 }
 
-function isCompleteNumberInput(value: AlertCondition["value"]): value is string {
+function isCompleteNumberInput(
+    value: AlertCondition["value"],
+): value is string {
     if (!value) return false;
 
     return completeNumberPattern.test(value.trim());
@@ -231,12 +213,12 @@ function matchesNumberCondition(
 }
 
 export function matchesAlertCondition(
-    study: StudyInfo,
+    opportunity: OpportunityInfo,
     condition: AlertCondition,
 ): boolean {
     if (!isAlertConditionComplete(condition)) return false;
 
-    const value = study[condition.field];
+    const value = alertRuleFieldConfig[condition.field].getValue(opportunity);
 
     if (getAlertRuleFieldType(condition.field) === "number") {
         return matchesNumberCondition(
@@ -258,7 +240,7 @@ export function getCompleteAlertConditions(
 }
 
 export function matchesAlertRuleGroup(
-    study: StudyInfo,
+    opportunity: OpportunityInfo,
     group: AlertRuleGroup,
 ): boolean {
     const conditions = getCompleteAlertConditions(group);
@@ -266,21 +248,21 @@ export function matchesAlertRuleGroup(
 
     return group.mode === "all"
         ? conditions.every((condition) =>
-              matchesAlertCondition(study, condition),
+              matchesAlertCondition(opportunity, condition),
           )
         : conditions.some((condition) =>
-              matchesAlertCondition(study, condition),
+              matchesAlertCondition(opportunity, condition),
           );
 }
 
 export function matchesAlertRules(
-    study: StudyInfo,
+    opportunity: OpportunityInfo,
     rules: AlertRules,
 ): boolean {
-    if (matchesAlertRuleGroup(study, rules.exclude)) return false;
+    if (matchesAlertRuleGroup(opportunity, rules.exclude)) return false;
 
     const includeConditions = getCompleteAlertConditions(rules.include);
     if (includeConditions.length === 0) return true;
 
-    return matchesAlertRuleGroup(study, rules.include);
+    return matchesAlertRuleGroup(opportunity, rules.include);
 }

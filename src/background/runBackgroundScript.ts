@@ -8,7 +8,7 @@ import {
     handleNotificationClicked,
     handleNotificationClosed,
     deliverNotifications,
-    handleStudiesDetected,
+    handleOpportunitiesDetected,
 } from "./handlers/handleNotifications";
 import {
     isSupportedHostTabUrl,
@@ -135,11 +135,11 @@ function runBackgroundScript() {
         console.error("Error requesting initial runtime sync:", error);
     });
 
-    onExtensionMessage("studies-detected", (payload) =>
-        handleStudiesDetected(store, payload),
+    onExtensionMessage("opportunities-detected", (payload) =>
+        handleOpportunitiesDetected(store, payload),
     );
 
-    onExtensionMessage("study-alert", (payload) =>
+    onExtensionMessage("opportunity-alert", (payload) =>
         deliverNotifications(store, payload),
     );
 

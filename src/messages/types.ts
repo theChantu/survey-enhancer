@@ -12,7 +12,7 @@ import type {
     GlobalSettingsChange,
 } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
-import type { StudyInfo } from "@/adapters/BaseAdapter";
+import type { OpportunityInfo } from "@/adapters/BaseAdapter";
 import type { NotificationData } from "@/background/handlers/handleNotifications";
 import type { NetworkRequestEvent } from "@/events/network";
 
@@ -64,9 +64,9 @@ export interface StoreMutationMessage {
 
 export type StoreMutationMessageType = keyof StoreMutationMessage;
 
-export type StudiesDetectedMessage = {
+export type OpportunitiesDetectedMessage = {
     siteName: SiteName;
-    studies: StudyInfo[];
+    opportunities: OpportunityInfo[];
     hidden: boolean;
 };
 
@@ -84,14 +84,19 @@ type PlaySoundMessage = {
 export type RuntimeSeenMeta = {
     firstSeenAt: number;
     lastSeenAt: number;
+    lastChangedAt: number;
+    lastAlertableChangeAt: number;
+    fingerprint: string;
 };
 
 export type RuntimeInputDataMap = {
-    studies: StudyInfo[];
+    opportunities: OpportunityInfo[];
 };
 
 export type RuntimeOutputDataMap = {
-    studies: Array<RuntimeInputDataMap["studies"][number] & RuntimeSeenMeta>;
+    opportunities: Array<
+        RuntimeInputDataMap["opportunities"][number] & RuntimeSeenMeta
+    >;
 };
 
 export type RuntimeChannel = keyof RuntimeInputDataMap & keyof RuntimeOutputDataMap;
@@ -136,8 +141,8 @@ export interface MessageMap extends StoreMutationMessage {
     fetch: { url: string };
     network: NetworkRequestEvent;
     "play-sound": PlaySoundMessage;
-    "studies-detected": StudiesDetectedMessage;
-    "study-alert": NotificationMessage;
+    "opportunities-detected": OpportunitiesDetectedMessage;
+    "opportunity-alert": NotificationMessage;
     "study-completion": { siteName: SiteName; url: string };
 }
 
@@ -153,8 +158,8 @@ export interface ResponseMap {
     fetch: unknown;
     network: void;
     "play-sound": void;
-    "studies-detected": void;
-    "study-alert": boolean;
+    "opportunities-detected": void;
+    "opportunity-alert": boolean;
     "study-completion": void;
 }
 

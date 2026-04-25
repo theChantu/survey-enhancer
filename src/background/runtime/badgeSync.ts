@@ -2,6 +2,7 @@ import { browser } from "#imports";
 import { readRuntimeCache, type RuntimeCache } from "./runtimeCache";
 import { setBadgeCount } from "./badge";
 import { matchesAlertRules } from "@/lib/notifications/alertRules";
+import { getOpportunityKey } from "@/lib/opportunities";
 
 import type { SettingsStore } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
@@ -50,7 +51,7 @@ export function createBadgeSync(
         });
     });
 
-    async function countNewStudies(): Promise<number> {
+    async function countNewOpportunities(): Promise<number> {
         if (popupOpen) return 0;
 
         const runtimeCache = getRuntimeCache();
@@ -58,26 +59,28 @@ export function createBadgeSync(
         let count = 0;
 
         for (const siteName of Object.keys(
-            runtimeCache.studies,
+            runtimeCache.opportunities,
         ) as SiteName[]) {
             const aggregated = readRuntimeCache(
                 runtimeCache,
-                "studies",
+                "opportunities",
                 siteName,
             );
             if (!aggregated) continue;
 
             const siteSettings = await store.sites
                 .entry(siteName)
-                .get(["studyAlerts"]);
-            const { rules } = siteSettings.studyAlerts;
+                .get(["opportunityAlerts"]);
+            const { rules } = siteSettings.opportunityAlerts;
 
-            const meta = runtimeMeta.studies?.[siteName];
-            for (const study of aggregated) {
-                const firstSeenAt = meta?.[study.id]?.firstSeenAt ?? 0;
+            const meta = runtimeMeta.opportunities?.[siteName];
+            for (const opportunity of aggregated) {
+                const lastAlertableChangeAt =
+                    meta?.[getOpportunityKey(opportunity)]
+                        ?.lastAlertableChangeAt ?? 0;
                 if (
-                    firstSeenAt > lastPopupOpenedAt &&
-                    matchesAlertRules(study, rules)
+                    lastAlertableChangeAt > lastPopupOpenedAt &&
+                    matchesAlertRules(opportunity, rules)
                 ) {
                     count += 1;
                 }
@@ -90,7 +93,7 @@ export function createBadgeSync(
     async function recompute(): Promise<void> {
         try {
             await ensureBadgeSync();
-            await setBadgeCount(await countNewStudies());
+            await setBadgeCount(await countNewOpportunities());
         } catch (error) {
             console.error("Error recomputing badge:", error);
         }

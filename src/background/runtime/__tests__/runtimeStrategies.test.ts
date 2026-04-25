@@ -6,11 +6,11 @@ import {
     hasRuntimeStrategy,
     updateRuntimeMeta,
 } from "../runtimeStrategies";
-import { createStudy } from "./utils";
+import { createProject, createStudy } from "./utils";
 
 describe("runtimeStrategies", () => {
     it("reports which channels have runtime strategies", () => {
-        expect(hasRuntimeStrategy("studies")).toBe(true);
+        expect(hasRuntimeStrategy("opportunities")).toBe(true);
     });
 
     it("creates and updates seen metadata without resetting firstSeenAt", () => {
@@ -18,7 +18,7 @@ describe("runtimeStrategies", () => {
 
         const initial = updateRuntimeMeta(
             runtimeMeta,
-            "studies",
+            "opportunities",
             "prolific",
             [
                 createStudy("study-a", {
@@ -30,15 +30,18 @@ describe("runtimeStrategies", () => {
         );
 
         expect(initial).toEqual({
-            "study-a": {
+            "study:study-a": {
                 firstSeenAt: 100,
                 lastSeenAt: 100,
+                lastChangedAt: 100,
+                lastAlertableChangeAt: 100,
+                fingerprint: "present",
             },
         });
 
         const updated = updateRuntimeMeta(
             runtimeMeta,
-            "studies",
+            "opportunities",
             "prolific",
             [
                 createStudy("study-a", {
@@ -58,13 +61,19 @@ describe("runtimeStrategies", () => {
         );
 
         expect(updated).toEqual({
-            "study-a": {
+            "study:study-a": {
                 firstSeenAt: 100,
                 lastSeenAt: 250,
+                lastChangedAt: 100,
+                lastAlertableChangeAt: 100,
+                fingerprint: "present",
             },
-            "study-b": {
+            "study:study-b": {
                 firstSeenAt: 250,
                 lastSeenAt: 250,
+                lastChangedAt: 250,
+                lastAlertableChangeAt: 250,
+                fingerprint: "present",
             },
         });
     });
@@ -74,7 +83,7 @@ describe("runtimeStrategies", () => {
 
         updateRuntimeMeta(
             runtimeMeta,
-            "studies",
+            "opportunities",
             "prolific",
             [
                 createStudy("study-a", {
@@ -85,12 +94,17 @@ describe("runtimeStrategies", () => {
             100,
         );
 
-        const enriched = enrichRuntimeData(runtimeMeta, "studies", "prolific", [
-            createStudy("study-a", {
-                title: "Study A",
-                researcher: "Researcher A",
-            }),
-        ]);
+        const enriched = enrichRuntimeData(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [
+                createStudy("study-a", {
+                    title: "Study A",
+                    researcher: "Researcher A",
+                }),
+            ],
+        );
 
         expect(enriched).toEqual([
             {
@@ -100,17 +114,23 @@ describe("runtimeStrategies", () => {
                 }),
                 firstSeenAt: 100,
                 lastSeenAt: 100,
+                lastChangedAt: 100,
+                lastAlertableChangeAt: 100,
+                fingerprint: "present",
             },
         ]);
     });
 
     it("reuses persisted firstSeenAt when runtime meta is reloaded after a restart", () => {
         const persistedRuntimeMeta = {
-            studies: {
+            opportunities: {
                 prolific: {
-                    "study-a": {
+                    "study:study-a": {
                         firstSeenAt: 100,
                         lastSeenAt: 100,
+                        lastChangedAt: 100,
+                        lastAlertableChangeAt: 100,
+                        fingerprint: "present",
                     },
                 },
             },
@@ -118,7 +138,7 @@ describe("runtimeStrategies", () => {
 
         const enriched = enrichRuntimeData(
             persistedRuntimeMeta,
-            "studies",
+            "opportunities",
             "prolific",
             [
                 createStudy("study-a", {
@@ -140,7 +160,7 @@ describe("runtimeStrategies", () => {
 
         updateRuntimeMeta(
             runtimeMeta,
-            "studies",
+            "opportunities",
             "prolific",
             [
                 createStudy("study-a", {
@@ -152,7 +172,7 @@ describe("runtimeStrategies", () => {
         );
         updateRuntimeMeta(
             runtimeMeta,
-            "studies",
+            "opportunities",
             "cloudresearch",
             [
                 createStudy("study-b", {
@@ -166,19 +186,78 @@ describe("runtimeStrategies", () => {
             200,
         );
 
-        clearRuntimeMeta(runtimeMeta, "studies", "prolific");
+        clearRuntimeMeta(runtimeMeta, "opportunities", "prolific");
         expect(runtimeMeta).toEqual({
-            studies: {
+            opportunities: {
                 cloudresearch: {
-                    "study-b": {
+                    "study:study-b": {
                         firstSeenAt: 200,
                         lastSeenAt: 200,
+                        lastChangedAt: 200,
+                        lastAlertableChangeAt: 200,
+                        fingerprint: "present",
                     },
                 },
             },
         });
 
-        clearRuntimeMeta(runtimeMeta, "studies", "cloudresearch");
+        clearRuntimeMeta(runtimeMeta, "opportunities", "cloudresearch");
         expect(runtimeMeta).toEqual({});
+    });
+
+    it("marks project count increases as alertable changes", () => {
+        const runtimeMeta = {};
+
+        updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 1 })],
+            100,
+        );
+
+        const increased = updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 2 })],
+            200,
+        );
+
+        expect(increased["project:project-a"]).toMatchObject({
+            firstSeenAt: 100,
+            lastSeenAt: 200,
+            lastChangedAt: 200,
+            lastAlertableChangeAt: 200,
+            fingerprint: "2",
+        });
+    });
+
+    it("does not mark project count decreases as alertable changes", () => {
+        const runtimeMeta = {};
+
+        updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 2 })],
+            100,
+        );
+
+        const decreased = updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 1 })],
+            200,
+        );
+
+        expect(decreased["project:project-a"]).toMatchObject({
+            firstSeenAt: 100,
+            lastSeenAt: 200,
+            lastChangedAt: 200,
+            lastAlertableChangeAt: 100,
+            fingerprint: "1",
+        });
     });
 });

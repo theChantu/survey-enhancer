@@ -12,7 +12,11 @@ type EnhancementConfig = {
     priority: boolean;
 };
 
-const enhancementKeys = ["currency", "highlightRates", "studyAlerts"] as const;
+const enhancementKeys = [
+    "currency",
+    "highlightRates",
+    "opportunityAlerts",
+] as const;
 
 export type EnhancementKey = (typeof enhancementKeys)[number];
 
@@ -26,7 +30,7 @@ export const enhancementConfigs = {
         priority: false,
     },
 
-    studyAlerts: {
+    opportunityAlerts: {
         enhancement: NotificationsEnhancement,
         priority: false,
     },
