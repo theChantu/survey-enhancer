@@ -7,7 +7,7 @@ A browser extension that monitors research study platforms and alerts you when n
 
 <table>
   <tr>
-    <td><img src=".github/screenshots/studies-tab.png" alt="Studies tab" width="360" /></td>
+    <td><img src=".github/screenshots/opportunities-tab.png" alt="Opportunities tab" width="360" /></td>
     <td><img src=".github/screenshots/settings-tab.png" alt="Settings tab" width="360" /></td>
   </tr>
 </table>
@@ -16,17 +16,17 @@ A browser extension that monitors research study platforms and alerts you when n
 
 ## Features
 
-- **Studies Inbox:** View studies from supported sites in one popup tab, with various sorting options.
+- **Opportunities Inbox:** View opportunities from supported sites in one popup tab, with various sorting options.
 - **Highlight Rates:** Applies color scaling to hourly rates to highlight higher and lower paying studies.
 - **Currency Conversion:** Converts rewards into your selected target currency.
-- **Notifications:** Study alerts with configurable rules for title, researcher, reward, hourly rate, slots, and average completion time.
-- **Auto Reload:** Automatically refreshes the page at random intervals to check for new studies.
-- **Analytics:** Tracks completed studies and daily progress per supported site.
+- **Notifications:** Opportunity alerts with configurable rules for title, researcher, reward, hourly rate, slots, and average completion time.
+- **Auto Reload:** Automatically refreshes the page at random intervals to check for new opportunities.
+- **Analytics:** Tracks completed opportunities and daily progress per supported site.
 
 ## Supported Sites
 
-- [Prolific](https://app.prolific.com/studies)
-- [CloudResearch](https://connect.cloudresearch.com/participant/dashboard)
+- [Prolific](https://www.prolific.com)
+- [CloudResearch](https://www.cloudresearch.com)
 
 ## Installation
 
@@ -48,9 +48,9 @@ A browser extension that monitors research study platforms and alerts you when n
 
 1. Navigate to a supported site.
 2. Click the Study Signal icon in the toolbar to open the popup.
-3. Use the `Studies` tab to view live study snapshots combined from supported open tabs.
+3. Use the `Opportunities` tab to view live opportunity snapshots combined from supported open tabs.
 4. Use the `Settings` tab to configure the currently selected site.
-5. Keep a supported study listings tab open if you want live studies and alerts to keep updating.
+5. Keep a supported study listings tab open if you want live opportunities and alerts to keep updating.
 
 ## Provider Setup
 

@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** April 11, 2026
+**Last updated:** April 25, 2026
 
 Study Signal is an open source browser extension that monitors research study platforms. This policy explains what data the extension accesses and how it is handled.
 
@@ -28,7 +28,7 @@ The extension makes the following network requests:
 | ------------------ | -------------------------------------------------------------------------- |
 | `storage`          | Save your settings and cached data locally                                 |
 | `tabs`             | Detect which supported sites are open and communicate with content scripts |
-| `notifications`    | Show browser notifications for new studies                                 |
+| `notifications`    | Show browser notifications for new opportunities                           |
 | `webRequest`       | Monitor study platform API responses to detect study completions           |
 | `idle`             | Determine if you are idle/locked to route alerts to Telegram               |
 | `offscreen`        | Play notification sounds in Chromium-based browsers                        |
