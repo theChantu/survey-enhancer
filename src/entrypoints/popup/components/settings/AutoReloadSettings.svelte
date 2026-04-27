@@ -4,6 +4,7 @@
     import Section from "@/components/Section.svelte";
     import { parsePositiveInt } from "@/lib/parse/parsePositiveInt";
     import Field from "@/components/Field.svelte";
+    import { capitalize } from "@/lib/utils";
 
     import type { AutoReloadSettingsModel } from "../../types";
 
@@ -21,7 +22,10 @@
         });
     }
 
-    function handleIntervalChange(key: "minInterval" | "maxInterval", value: number) {
+    function handleIntervalChange(
+        key: "minInterval" | "maxInterval",
+        value: number,
+    ) {
         void model.queueMutation("store-patch", {
             namespace: "sites",
             entry: model.siteName,
@@ -37,7 +41,7 @@
 <Section title="Auto Reload" icon={RefreshCw}>
     <ToggleControl
         title="Auto reload"
-        description="Refresh the page in the background to look for new studies."
+        description={`Check for new studies in the background on ${capitalize(model.siteName)}.`}
         value={model.autoReload.enabled}
         onClick={handleToggle}
     >

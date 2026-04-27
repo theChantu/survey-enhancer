@@ -109,7 +109,7 @@
 <Section title="Alerts" icon={Bell}>
     <ToggleControl
         title="Opportunity alerts"
-        description={`Get notified when a new opportunity appears or changes. Applies to ${capitalize(model.siteName)} only.`}
+        description={`Alert when studies appear or change on ${capitalize(model.siteName)}.`}
         value={model.opportunityAlerts.enabled}
         onClick={() =>
             patchSiteNotifications({
@@ -119,7 +119,7 @@
         {#snippet children()}
             <ToggleControl
                 title="Browser notifications"
-                description="Show a browser notification for alerts across all supported sites."
+                description="Push notifications across all sites."
                 value={model.notifications.delivery.browser}
                 onClick={() =>
                     patchGlobalNotifications({
@@ -130,7 +130,7 @@
             />
             <ToggleControl
                 title="Sound alerts"
-                description="Play a sound for alerts across all supported sites."
+                description="Play a sound when alerts trigger."
                 value={model.notifications.delivery.sound.enabled}
                 onClick={() =>
                     patchGlobalNotifications({
@@ -146,9 +146,7 @@
                     <Field label="Alert sound" id="notification-sound">
                         <SelectControl
                             id="notification-sound"
-                            bind:value={
-                                model.notifications.delivery.sound.type
-                            }
+                            bind:value={model.notifications.delivery.sound.type}
                             onchange={onSoundChange}
                         >
                             {#each notificationSounds as sound}

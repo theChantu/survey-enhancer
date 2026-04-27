@@ -24,7 +24,7 @@
 <Section title="Developer" icon={Bug} tone="muted">
     <ToggleControl
         title="Developer mode"
-        description="Show extension activity in the browser console."
+        description="Log activity to browser console."
         value={model.settingsState.globals.debug.enabled}
         onClick={handleToggle}
     >
