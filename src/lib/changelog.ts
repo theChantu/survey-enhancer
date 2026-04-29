@@ -7,7 +7,7 @@ export type ChangelogEntry = {
 export const changelogEntries = [
     {
         version: "1.8.0",
-        title: "Opportunity alerts",
+        title: "Alerts, filtering & UI refresh",
         items: [
             "Added notification conditions with include and exclude rules.",
             "Filter alerts by title, researcher, reward, hourly rate, slots, and completion time.",

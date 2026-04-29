@@ -31,7 +31,7 @@
     <div class="shrink-0 px-5" transition:slide={{ duration: 150 }}>
         <section
             role="status"
-            class="popup-surface border border-popup-accent-border bg-popup-accent-surface p-3"
+            class="popup-surface border border-popup-accent-border bg-popup-accent-surface p-3 px-4"
         >
             <div class="flex items-start gap-3">
                 <span
