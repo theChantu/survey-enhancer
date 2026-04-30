@@ -25,6 +25,8 @@
     let siteEnhancements = $derived(
         new Set(sites[model.activeSite.url].enhancements),
     );
+
+    let siteFeatures = $derived(new Set(sites[model.activeSite.url].features));
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
@@ -99,13 +101,15 @@
                 }}
             />
 
-            <AutoReloadSettings
-                model={{
-                    queueMutation,
-                    siteName: model.activeSite.name,
-                    autoReload: model.activeSite.settings.autoReload,
-                }}
-            />
+            {#if siteFeatures.has("autoReload")}
+                <AutoReloadSettings
+                    model={{
+                        queueMutation,
+                        siteName: model.activeSite.name,
+                        autoReload: model.activeSite.settings.autoReload,
+                    }}
+                />
+            {/if}
 
             <DebugSettings
                 model={{

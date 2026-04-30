@@ -6,7 +6,7 @@ export type ChangelogEntry = {
 
 export const changelogEntries = [
     {
-        version: "1.8.0",
+        version: "1.8.1",
         title: "Alerts, filtering & UI refresh",
         items: [
             "Added notification conditions with include and exclude rules.",
@@ -15,6 +15,7 @@ export const changelogEntries = [
             "Updated alerts, badges, and the popup to track opportunities instead of studies only.",
             "Gave the UI a new look.",
             "Added min and max sliders for highlighting rates.",
+            "Auto reload settings now only appear on supported platforms.",
         ],
     },
 ] as const satisfies ChangelogEntry[];

@@ -1,6 +1,8 @@
 import type { EnhancementKey } from "@/enhancements/enhancementConfigs";
 import type { AdapterEventType, NetworkEventMatcher } from "./events";
 
+export type SiteFeature = "autoReload";
+
 export interface SiteInfo {
     name: string;
     studyPath: string;
@@ -8,6 +10,7 @@ export interface SiteInfo {
     suffix?: string;
     query?: Record<string, string | number | boolean>;
     enhancements: EnhancementKey[];
+    features: SiteFeature[];
     watchedRequestTargets: string[];
     networkPatterns: Partial<Record<AdapterEventType, NetworkEventMatcher[]>>;
 }
@@ -18,6 +21,7 @@ export const sites = {
         studyPath: "/studies",
         iconPath: "/apple-touch-icon.png",
         enhancements: ["currency", "highlightRates", "opportunityAlerts"],
+        features: [],
         watchedRequestTargets: ["internal-api.prolific.com/api/v1"],
         networkPatterns: {
             studyCompletion: [
@@ -46,6 +50,7 @@ export const sites = {
             size: 100,
         },
         enhancements: ["currency", "highlightRates", "opportunityAlerts"],
+        features: ["autoReload"],
         watchedRequestTargets: ["connect.cloudresearch.com/participant-api"],
         networkPatterns: {
             studyCompletion: [

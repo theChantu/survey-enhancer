@@ -85,8 +85,10 @@ async function runContentScript(ctx: ContentScriptContext) {
     // Apply the enhancements initially
     await runEnhancements();
 
+    const supportsAutoReload = adapter.hasFeature("autoReload");
+
     function initializeAutoReload(autoReload: SiteSettings["autoReload"]) {
-        if (!autoReload.enabled) return;
+        if (!supportsAutoReload || !autoReload.enabled) return;
 
         const delay = getRandomTimeoutMs(
             autoReload.minInterval,
@@ -149,7 +151,7 @@ async function runContentScript(ctx: ContentScriptContext) {
             const previousAutoReload = site.autoReload;
             site = deepMerge(site, payload.data);
 
-            if (payload.data.autoReload) {
+            if (supportsAutoReload && payload.data.autoReload) {
                 updateAutoReload(previousAutoReload, site.autoReload);
             }
 

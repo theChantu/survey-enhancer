@@ -12,7 +12,12 @@ import {
 } from "./capabilities";
 import { parseDurationSeconds } from "@/lib/parse/parseDurationSeconds";
 
-import type { SiteInfo, SupportedHosts, sites } from "./siteConfigs";
+import type {
+    SiteFeature,
+    SiteInfo,
+    SupportedHosts,
+    sites,
+} from "./siteConfigs";
 import type { NetworkRequestEvent } from "@/events/network";
 import type {
     AdapterEventMap,
@@ -106,6 +111,10 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
     }
 
     private enhancements?: ReadonlySet<EnhancementKey>;
+
+    hasFeature(feature: SiteFeature): boolean {
+        return this.config.features.includes(feature);
+    }
 
     hasModule(enhancements: EnhancementKey): boolean {
         this.enhancements ??= new Set(this.config.enhancements);
