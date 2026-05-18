@@ -109,7 +109,7 @@
                             <Icon
                                 size={12}
                                 strokeWidth={2}
-                                class={`${i >= MAX_VISIBLE_ICONS ? "hidden group-hover/card:block group-focus/card:block" : ""} ${i < deviceCapabilities.length ? "text-popup-text-muted opacity-70" : "text-popup-text-faint opacity-50"}`}
+                                class={`${i >= MAX_VISIBLE_ICONS ? "hidden group-hover/card:block group-focus/card:block" : ""} ${i < deviceCapabilities.length ? "text-popup-text-muted opacity-85" : "text-popup-text-muted opacity-70"}`}
                                 title={capability.label}
                                 aria-label={capability.label}
                             />
@@ -128,7 +128,7 @@
 
         <div class="flex shrink-0 flex-col items-end justify-center gap-0.5">
             {#if timeAgo}
-                <span class="text-[10px] text-popup-text-faint">{timeAgo}</span>
+                <span class="text-[10px] text-popup-text-muted">{timeAgo}</span>
             {/if}
             <span
                 class="text-[22px] font-bold leading-tight tracking-[-0.02em]"

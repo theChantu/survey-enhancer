@@ -10,6 +10,7 @@ export const changelogEntries = [
         title: "Alert visibility control",
         items: [
             "Added an option to suppress alerts while viewing a site's page.",
+            "Improved opportunity card timestamp and capability icon contrast.",
         ],
     },
     {

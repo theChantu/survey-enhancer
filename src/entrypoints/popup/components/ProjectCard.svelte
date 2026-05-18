@@ -71,7 +71,7 @@
 
     <div class="flex shrink-0 flex-col items-end justify-center">
         {#if timeAgo}
-            <span class="text-[10px] text-popup-text-faint">{timeAgo}</span>
+            <span class="text-[10px] text-popup-text-muted">{timeAgo}</span>
         {/if}
     </div>
 </div>
