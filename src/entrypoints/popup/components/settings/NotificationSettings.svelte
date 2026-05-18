@@ -118,6 +118,16 @@
     >
         {#snippet children()}
             <ToggleControl
+                title="Suppress alerts while viewing the site"
+                description={`Do not play sounds or send notifications while ${capitalize(model.siteName)}'s page is visible.`}
+                value={model.opportunityAlerts.suppressWhenVisible}
+                onClick={() =>
+                    patchSiteNotifications({
+                        suppressWhenVisible:
+                            !model.opportunityAlerts.suppressWhenVisible,
+                    })}
+            />
+            <ToggleControl
                 title="Browser notifications"
                 description="Push notifications across all sites."
                 value={model.notifications.delivery.browser}

@@ -76,9 +76,12 @@ export async function handleOpportunitiesDetected(
 
     const previousCacheEntries = new Map<string, OpportunityCacheEntry>();
     let alertableOpportunities: OpportunityInfo[] = [];
+    let suppressVisibleAlerts = false;
     let rules!: AlertRules;
 
     await siteStore.update((current) => {
+        suppressVisibleAlerts =
+            !hidden && current.opportunityAlerts.suppressWhenVisible;
         rules = current.opportunityAlerts.rules;
         const nextOpportunityCache = pruneOpportunityCache(
             current.opportunityAlerts.cache,
@@ -133,8 +136,7 @@ export async function handleOpportunitiesDetected(
     });
 
     if (alertableOpportunities.length === 0) return;
-
-    if (!hidden) return;
+    if (suppressVisibleAlerts) return;
 
     const notifications: NotificationData[] = [];
     for (const opportunity of alertableOpportunities) {

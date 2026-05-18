@@ -39,6 +39,7 @@ interface OpportunityAlerts {
             titles: Record<string, number>;
         };
         enabled: boolean;
+        suppressWhenVisible: boolean;
         rules: AlertRules;
     };
 }

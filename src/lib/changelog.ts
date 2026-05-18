@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const changelogEntries = [
     {
+        version: "1.8.2",
+        title: "Alert visibility control",
+        items: [
+            "Added an option to suppress alerts while viewing a site's page.",
+        ],
+    },
+    {
         version: "1.8.1",
         title: "Alerts, filtering & UI refresh",
         items: [

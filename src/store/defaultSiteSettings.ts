@@ -10,6 +10,7 @@ const defaultSiteSettings = Object.freeze({
             titles: {},
         },
         enabled: true,
+        suppressWhenVisible: false,
         rules: defaultAlertRules,
     },
     autoReload: {
