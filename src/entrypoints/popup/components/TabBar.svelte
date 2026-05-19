@@ -4,12 +4,16 @@
     import { capitalize } from "@/lib/utils";
     import { runtimeState, uiState } from "../state.svelte";
     import { tabs } from "../types";
+    import { isDisplayableOpportunity } from "../lib/opportunities";
 
     const opportunityCount = $derived(
         supportedHosts.reduce((sum, host) => {
             const opportunities = runtimeState.opportunities[host];
             return (
-                sum + (Array.isArray(opportunities) ? opportunities.length : 0)
+                sum +
+                (Array.isArray(opportunities)
+                    ? opportunities.filter(isDisplayableOpportunity).length
+                    : 0)
             );
         }, 0),
     );
