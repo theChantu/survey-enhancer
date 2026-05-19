@@ -6,6 +6,7 @@ import {
 import { capitalize } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { playSound } from "@/lib/playSound";
+import { NOTIFICATION_SOUND_COOLDOWN_MS } from "@/constants";
 
 import type { MessageMap } from "@/messages/types";
 import type { SettingsStore } from "@/store/SettingsStore";
@@ -14,6 +15,7 @@ import type { NotificationData } from "./types";
 
 const notificationActions = new Map<string, () => void | Promise<void>>();
 const defaultNotificationIconUrl = browser.runtime.getURL("/icon-48.png");
+const lastNotificationSoundAtBySite = new Map<string, number>();
 
 type ProviderSendResult = {
     sent: boolean;
@@ -50,6 +52,21 @@ async function playNotificationSound(sound: NotificationSound, volume: number) {
             data: { sound, volume },
         });
     }
+}
+
+function shouldPlayNotificationSound(siteName: string): boolean {
+    const now = Date.now();
+    const lastPlayedAt = lastNotificationSoundAtBySite.get(siteName);
+
+    if (
+        lastPlayedAt !== undefined &&
+        now - lastPlayedAt < NOTIFICATION_SOUND_COOLDOWN_MS
+    ) {
+        return false;
+    }
+
+    lastNotificationSoundAtBySite.set(siteName, now);
+    return true;
 }
 
 function getEnabledProviders(
@@ -255,7 +272,7 @@ export async function deliverNotifications(
         },
     } = await store.namespace("globals").get(["notifications"]);
 
-    if (sound.enabled) {
+    if (sound.enabled && shouldPlayNotificationSound(siteName)) {
         try {
             await playNotificationSound(sound.type, sound.volume);
         } catch (error) {
