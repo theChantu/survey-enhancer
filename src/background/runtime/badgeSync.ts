@@ -2,7 +2,10 @@ import { browser } from "#imports";
 import { readRuntimeCache, type RuntimeCache } from "./runtimeCache";
 import { setBadgeCount } from "./badge";
 import { matchesAlertRules } from "@/lib/notifications/alertRules";
-import { getOpportunityKey } from "@/lib/opportunities/opportunities";
+import {
+    getOpportunityKey,
+    isOpportunityAlertable,
+} from "@/lib/opportunities/opportunities";
 
 import type { SettingsStore } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
@@ -80,6 +83,7 @@ export function createBadgeSync(
                         ?.lastAlertableChangeAt ?? 0;
                 if (
                     lastAlertableChangeAt > lastPopupOpenedAt &&
+                    isOpportunityAlertable(opportunity) &&
                     matchesAlertRules(opportunity, rules)
                 ) {
                     count += 1;
