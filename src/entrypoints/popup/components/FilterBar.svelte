@@ -37,7 +37,7 @@
     const chipLabels: Record<FilterChip, string> = {
         highRate: "Strong rate",
         quick: "< 15min",
-        new: "New",
+        recent: "Recent",
     };
 
     let opportunitySort = $derived(settingsState.globals.opportunitySort);

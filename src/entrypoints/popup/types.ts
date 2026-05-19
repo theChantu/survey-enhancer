@@ -15,7 +15,7 @@ export const tabs = ["opportunities", "analytics", "settings"] as const;
 
 export type PopupTab = (typeof tabs)[number];
 
-export const filterChips = ["highRate", "quick", "new"] as const;
+export const filterChips = ["highRate", "quick", "recent"] as const;
 export type FilterChip = (typeof filterChips)[number];
 
 export type UiState = {

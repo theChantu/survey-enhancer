@@ -356,7 +356,7 @@
     }
 
     const QUICK_THRESHOLD_MINUTES = 15;
-    const NEW_THRESHOLD_MS = 10 * 60_000;
+    const RECENT_THRESHOLD_MS = 10 * 60_000;
 
     function applyFilters(
         items: OpportunityItem[],
@@ -387,10 +387,12 @@
                                 QUICK_THRESHOLD_MINUTES,
                     );
                     break;
-                case "new":
+                case "recent":
                     filtered = filtered.filter(
                         (item) =>
-                            Date.now() - item.firstSeenAt < NEW_THRESHOLD_MS,
+                            Date.now() - item.firstSeenAt < RECENT_THRESHOLD_MS ||
+                            Date.now() - item.lastAlertableChangeAt <
+                                RECENT_THRESHOLD_MS,
                     );
                     break;
             }

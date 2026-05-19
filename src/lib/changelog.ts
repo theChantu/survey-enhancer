@@ -12,6 +12,7 @@ export const changelogEntries = [
             "Added an option to suppress alerts while viewing a site's page.",
             "Improved opportunity card timestamp and capability icon contrast.",
             "Fixed Prolific project alerts when available studies refill from zero.",
+            'Renamed the "New" filter to "Recent" to include recently updated opportunities.',
         ],
     },
     {
