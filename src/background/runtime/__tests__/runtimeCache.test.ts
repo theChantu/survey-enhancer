@@ -8,7 +8,7 @@ import {
     updateRuntimeCache,
 } from "../runtimeCache";
 
-import { createProject, createStudy } from "./utils";
+import { createProject, createStudy } from "@/tests/utils/opportunities";
 
 describe("runtimeCache", () => {
     it("does not report a change when the same tab syncs identical studies", () => {
@@ -63,15 +63,21 @@ describe("runtimeCache", () => {
             }),
         ]);
 
-        const result = updateRuntimeCache(cache, "opportunities", "prolific", 2, [
-            createStudy("shared", {
-                title: "Study A (updated)",
-                researcher: "Researcher A",
-                reward: 2,
-                rate: 13,
-                link: "https://app.prolific.com/studies/a",
-            }),
-        ]);
+        const result = updateRuntimeCache(
+            cache,
+            "opportunities",
+            "prolific",
+            2,
+            [
+                createStudy("shared", {
+                    title: "Study A (updated)",
+                    researcher: "Researcher A",
+                    reward: 2,
+                    rate: 13,
+                    link: "https://app.prolific.com/studies/a",
+                }),
+            ],
+        );
 
         expect(result.data).toHaveLength(1);
         expect(result.data?.[0]?.title).toBe("Study A (updated)");

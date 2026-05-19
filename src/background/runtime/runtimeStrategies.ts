@@ -3,7 +3,7 @@ import {
     getOpportunityFingerprint,
     getOpportunityKey,
     isOpportunityAlertable,
-} from "@/lib/opportunities";
+} from "@/lib/opportunities/opportunities";
 import type {
     RuntimeChannel,
     RuntimeInputDataMap,
@@ -79,9 +79,7 @@ export const runtimeChannelStrategies = defineRuntimeStrategies({
                     ? {
                           ...current,
                           lastSeenAt: now,
-                          lastChangedAt: changed
-                              ? now
-                              : current.lastChangedAt,
+                          lastChangedAt: changed ? now : current.lastChangedAt,
                           lastAlertableChangeAt:
                               changed &&
                               isAlertableOpportunityChange(opportunity, current)

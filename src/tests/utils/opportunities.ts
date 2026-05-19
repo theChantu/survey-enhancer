@@ -1,7 +1,7 @@
 import type { ProjectInfo, StudyInfo } from "@/adapters/BaseAdapter";
 
 export function createStudy(
-    id: string,
+    id = "study-a",
     overrides: Partial<StudyInfo> = {},
 ): StudyInfo {
     return {
@@ -22,7 +22,7 @@ export function createStudy(
 }
 
 export function createProject(
-    id: string,
+    id = "project-a",
     overrides: Partial<ProjectInfo> = {},
 ): ProjectInfo {
     return {

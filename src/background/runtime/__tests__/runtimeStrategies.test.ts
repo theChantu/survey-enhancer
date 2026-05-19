@@ -6,7 +6,7 @@ import {
     hasRuntimeStrategy,
     updateRuntimeMeta,
 } from "../runtimeStrategies";
-import { createProject, createStudy } from "./utils";
+import { createProject, createStudy } from "@/tests/utils/opportunities";
 
 describe("runtimeStrategies", () => {
     it("reports which channels have runtime strategies", () => {
@@ -257,6 +257,48 @@ describe("runtimeStrategies", () => {
             lastSeenAt: 200,
             lastChangedAt: 200,
             lastAlertableChangeAt: 100,
+            fingerprint: "1",
+        });
+    });
+
+    it("marks project refills from zero as alertable changes", () => {
+        const runtimeMeta = {};
+
+        updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 1 })],
+            100,
+        );
+
+        const empty = updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 0 })],
+            200,
+        );
+
+        expect(empty["project:project-a"]).toMatchObject({
+            lastChangedAt: 200,
+            lastAlertableChangeAt: 100,
+            fingerprint: "0",
+        });
+
+        const refilled = updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 1 })],
+            300,
+        );
+
+        expect(refilled["project:project-a"]).toMatchObject({
+            firstSeenAt: 100,
+            lastSeenAt: 300,
+            lastChangedAt: 300,
+            lastAlertableChangeAt: 300,
             fingerprint: "1",
         });
     });

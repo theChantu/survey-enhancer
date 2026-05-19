@@ -6,11 +6,12 @@ export type ChangelogEntry = {
 
 export const changelogEntries = [
     {
-        version: "1.8.2",
+        version: "1.8.3",
         title: "Alert visibility control",
         items: [
             "Added an option to suppress alerts while viewing a site's page.",
             "Improved opportunity card timestamp and capability icon contrast.",
+            "Fixed Prolific project alerts when available studies refill from zero.",
         ],
     },
     {

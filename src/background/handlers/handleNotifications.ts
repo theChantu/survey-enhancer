@@ -8,7 +8,7 @@ import {
     getOpportunityFingerprint,
     getOpportunityKey,
     isOpportunityAlertable,
-} from "@/lib/opportunities";
+} from "@/lib/opportunities/opportunities";
 import {
     buildNotification,
     type OpportunityCacheEntry,
@@ -64,6 +64,31 @@ function getCachedOpportunity(
         : opportunity;
 }
 
+function buildOpportunityCacheEntry(
+    opportunity: OpportunityInfo,
+    timestamp: number,
+): OpportunityCacheEntry {
+    return {
+        notifiedAt: timestamp,
+        fingerprint: getOpportunityFingerprint(opportunity),
+        availableStudyCount:
+            opportunity.kind === "project"
+                ? opportunity.availableStudyCount
+                : null,
+    };
+}
+
+function shouldUpdateProjectBaseline(
+    opportunity: OpportunityInfo,
+    previousEntry: OpportunityCacheEntry | undefined,
+): boolean {
+    return (
+        opportunity.kind === "project" &&
+        previousEntry !== undefined &&
+        previousEntry.availableStudyCount !== opportunity.availableStudyCount
+    );
+}
+
 export async function handleOpportunitiesDetected(
     store: SettingsStore,
     payload: MessageMap["opportunities-detected"],
@@ -87,28 +112,36 @@ export async function handleOpportunitiesDetected(
             current.opportunityAlerts.cache,
         );
 
-        alertableOpportunities = opportunities.filter((opportunity) => {
+        const cacheableOpportunities: OpportunityInfo[] = [];
+        alertableOpportunities = [];
+
+        for (const opportunity of opportunities) {
             const key = getOpportunityKey(opportunity);
             const previousEntry = nextOpportunityCache.opportunities[key];
             if (previousEntry) previousCacheEntries.set(key, previousEntry);
 
-            return isOpportunityAlertable(
+            const alertable = isOpportunityAlertable(
                 opportunity,
                 getCachedOpportunity(opportunity, nextOpportunityCache),
             );
-        });
-        if (alertableOpportunities.length === 0) return {};
 
-        for (const opportunity of alertableOpportunities) {
+            if (alertable) {
+                alertableOpportunities.push(opportunity);
+            }
+
+            if (
+                alertable ||
+                shouldUpdateProjectBaseline(opportunity, previousEntry)
+            ) {
+                cacheableOpportunities.push(opportunity);
+            }
+        }
+
+        if (cacheableOpportunities.length === 0) return {};
+
+        for (const opportunity of cacheableOpportunities) {
             nextOpportunityCache.opportunities[getOpportunityKey(opportunity)] =
-                {
-                    notifiedAt: now,
-                    fingerprint: getOpportunityFingerprint(opportunity),
-                    availableStudyCount:
-                        opportunity.kind === "project"
-                            ? opportunity.availableStudyCount
-                            : null,
-                };
+                buildOpportunityCacheEntry(opportunity, now);
         }
 
         for (const study of alertableOpportunities.filter(

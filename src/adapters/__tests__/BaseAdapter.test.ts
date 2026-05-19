@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CloudResearchAdapter } from "../CloudResearchAdapter";
 import { ProlificAdapter } from "../ProlificAdapter";
 import { createCapabilityElement, createQueryElement } from "./utils";
@@ -23,6 +23,51 @@ class TestCloudResearchAdapter extends CloudResearchAdapter {
     capabilityHints(el: HTMLElement) {
         return this.getCapabilityHints(el);
     }
+}
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
+
+function createTextElement(text: string): HTMLElement {
+    return { textContent: text } as HTMLElement;
+}
+
+function createProjectItem(title: string, count?: string): HTMLElement {
+    return {
+        querySelector(selector: string) {
+            if (selector === "span.nav-item__text") {
+                return createTextElement(title);
+            }
+
+            if (selector === "sup.indicator") {
+                return count === undefined ? null : createTextElement(count);
+            }
+
+            return null;
+        },
+    } as unknown as HTMLElement;
+}
+
+function stubProlificProjects(projects: HTMLElement[]): void {
+    const projectSection = {
+        querySelector(selector: string) {
+            return selector === "h2" ? createTextElement("Projects") : null;
+        },
+        querySelectorAll(selector: string) {
+            return selector === "li" ? projects : [];
+        },
+    } as unknown as HTMLElement;
+
+    vi.stubGlobal("document", {
+        querySelectorAll(selector: string) {
+            if (selector === "nav.projects-sidebar section") {
+                return [projectSection];
+            }
+
+            return [];
+        },
+    });
 }
 
 describe("BaseAdapter network matching", () => {
@@ -125,8 +170,12 @@ describe("Site capability hint collection", () => {
                     createCapabilityElement({ classes: ["fa-tablet"] }),
                 ],
                 '[class*="fas"].cr-text-secondary': [
-                    createCapabilityElement({ classes: ["fas", "fa-microphone"] }),
-                    createCapabilityElement({ classes: ["fas", "fa-download"] }),
+                    createCapabilityElement({
+                        classes: ["fas", "fa-microphone"],
+                    }),
+                    createCapabilityElement({
+                        classes: ["fas", "fa-download"],
+                    }),
                 ],
             }),
         );
@@ -139,5 +188,31 @@ describe("Site capability hint collection", () => {
             ]),
         );
         expect(hints).not.toContain("fa-tablet");
+    });
+});
+
+describe("Prolific project extraction", () => {
+    it("keeps projects without a count badge as zero-count opportunities", () => {
+        stubProlificProjects([
+            createProjectItem("Empty project"),
+            createProjectItem("Active project", "2"),
+        ]);
+
+        const opportunities = new ProlificAdapter().extractOpportunities();
+
+        expect(opportunities).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    kind: "project",
+                    title: "Empty project",
+                    availableStudyCount: 0,
+                }),
+                expect.objectContaining({
+                    kind: "project",
+                    title: "Active project",
+                    availableStudyCount: 2,
+                }),
+            ]),
+        );
     });
 });

@@ -120,7 +120,8 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
 
     private getProjectAvailableStudyCount(el: HTMLElement): number | null {
         const count = this.getText(el, "sup.indicator");
-        return count ? parseNumericValue(count) : null;
+        // Prolific hides the badge when no studies are available.
+        return count ? parseNumericValue(count) : 0;
     }
 
     private extractProject(el: HTMLElement): ProjectInfo | null {
@@ -128,7 +129,7 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
         if (!title) return null;
 
         const availableStudyCount = this.getProjectAvailableStudyCount(el);
-        if (availableStudyCount === null || availableStudyCount <= 0) return null;
+        if (availableStudyCount === null) return null;
 
         return {
             id: this.getSyntheticProjectId(title),

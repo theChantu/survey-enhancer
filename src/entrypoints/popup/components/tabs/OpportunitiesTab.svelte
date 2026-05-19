@@ -11,7 +11,7 @@
     import { ensureConversionRates } from "@/lib/currency/rates";
     import { capitalize, rateToColor } from "@/lib/utils";
     import { matchesAlertRules } from "@/lib/notifications/alertRules";
-    import { getOpportunityKey as getBaseOpportunityKey } from "@/lib/opportunities";
+    import { getOpportunityKey as getBaseOpportunityKey } from "@/lib/opportunities/opportunities";
     import {
         type OpportunitySort,
         type Currency,
@@ -328,6 +328,14 @@
             if (!Array.isArray(hostOpportunities)) continue;
 
             for (const opportunity of hostOpportunities) {
+                if (
+                    opportunity.kind === "project" &&
+                    opportunity.availableStudyCount !== null &&
+                    opportunity.availableStudyCount <= 0
+                ) {
+                    continue;
+                }
+
                 items.push(
                     opportunity.kind === "study"
                         ? buildStudyItem(opportunity, host, order)

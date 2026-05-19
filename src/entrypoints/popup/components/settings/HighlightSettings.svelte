@@ -7,7 +7,7 @@
     import { getCurrencySymbol } from "@/lib/currency";
 
     import type { HighlightSettingsModel } from "../../types";
-    import { GlobalSettings } from "@/store/types";
+    import type { GlobalSettings } from "@/store/types";
 
     let { model }: { model: HighlightSettingsModel } = $props();
 

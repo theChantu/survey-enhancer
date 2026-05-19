@@ -6,25 +6,19 @@ import {
     type AlertRules,
 } from "./alertRules";
 import { defaultAlertRules } from "./defaultAlertRules";
+import { createStudy } from "@/tests/utils/opportunities";
 
 import type { StudyInfo } from "@/adapters/BaseAdapter";
 
 function study(overrides: Partial<StudyInfo> = {}): StudyInfo {
-    return {
-        id: "study-a",
-        kind: "study",
+    return createStudy("study-a", {
         title: "Memory and attention",
         researcher: "Research Lab",
         reward: 4,
         rate: 16,
         link: null,
-        symbol: "$",
-        devices: [],
-        peripherals: [],
-        averageCompletionMinutes: 10,
-        slots: 10,
         ...overrides,
-    };
+    });
 }
 
 describe("alert rules", () => {

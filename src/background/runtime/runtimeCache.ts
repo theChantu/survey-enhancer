@@ -3,7 +3,7 @@ import {
     type SiteName,
     type SupportedHosts,
 } from "@/adapters/siteConfigs";
-import { getOpportunityKey } from "@/lib/opportunities";
+import { getOpportunityKey } from "@/lib/opportunities/opportunities";
 
 import type { RuntimeChannel, RuntimeInputDataMap } from "@/messages/types";
 
